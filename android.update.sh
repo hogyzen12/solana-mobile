@@ -3,7 +3,6 @@
 
 # Paths
 APP_NAME="mobile"
-BUNDLETOOL_JAR="$HOME/bundletool-all-1.18.1.jar"      # Make sure this path is correct for your system
 AAB_FILE="./dist/android/${APP_NAME}-release.aab"     # Updated path based on android.bundle.sh output
 OUTPUT_APKS="./dist/android/${APP_NAME}appdev01.apks" # Output APKS to the same directory
 
@@ -34,7 +33,7 @@ if [ -f "$OUTPUT_APKS" ]; then
 fi
 
 # Build a universal APK set using bundletool
-java -jar "$BUNDLETOOL_JAR" build-apks \
+bundletool build-apks \
   --bundle="$AAB_FILE" \
   --output="$OUTPUT_APKS" \
   --mode=universal
@@ -48,7 +47,7 @@ echo "APK set built successfully at $OUTPUT_APKS"
 
 echo "Installing APK set on connected device..."
 # Install the APK set on the connected device
-java -jar "$BUNDLETOOL_JAR" install-apks --apks="$OUTPUT_APKS"
+bundletool install-apks --apks="$OUTPUT_APKS"
 
 if [ $? -ne 0 ]; then
   echo "Error: Failed to install the APK set on the device."
