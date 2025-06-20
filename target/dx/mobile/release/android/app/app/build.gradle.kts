@@ -5,11 +5,11 @@ plugins {
 
 android {
     namespace="com.example.Mobile"
-    compileSdk = 33
+    compileSdk = 35
     defaultConfig {
         applicationId = "com.example.Mobile"
         minSdk = 24
-        targetSdk = 33
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
     }
@@ -46,4 +46,5 @@ dependencies {
     implementation("androidx.webkit:webkit:1.6.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
+    implementation("com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.7")
 }

@@ -40,7 +40,7 @@ abstract class WryActivity : AppCompatActivity() {
             try {
                 @Suppress("DEPRECATION")
                 val info = packageManager.getPackageInfo(webViewPackage, 0)
-                return info.versionName
+                return info.versionName ?: ""
             } catch (ex: Exception) {
                 Logger.warn("Unable to get package info for '$webViewPackage'$ex")
             }
@@ -48,7 +48,7 @@ abstract class WryActivity : AppCompatActivity() {
             try {
                 @Suppress("DEPRECATION")
                 val info = packageManager.getPackageInfo("com.android.webview", 0)
-                return info.versionName
+                return info.versionName ?: ""
             } catch (ex: Exception) {
                 Logger.warn("Unable to get package info for 'com.android.webview'$ex")
             }
