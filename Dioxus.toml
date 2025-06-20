@@ -1,4 +1,5 @@
 [application]
+android_manifest = "android/app/src/main/AndroidManifest.xml"
 
 [web.app]
 
