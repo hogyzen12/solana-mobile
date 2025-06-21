@@ -7,6 +7,7 @@
 package dev.dioxus.main
 
 import dev.dioxus.main.RustWebView
+import dev.dioxus.main.SolanaWalletManager // Added for wallet integration
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 
 abstract class WryActivity : AppCompatActivity() {
     private lateinit var mWebView: RustWebView
+    private var solanaWalletManager: SolanaWalletManager? = null // Added for wallet integration
 
     open fun onWebViewCreate(webView: WebView) { }
 
@@ -130,5 +132,13 @@ abstract class WryActivity : AppCompatActivity() {
     private external fun memory()
     private external fun focus(focus: Boolean)
 
-    
+    // This method can be called from Rust via JNI
+    // Consider adding @Keep if you use Proguard and it's not called directly from other Kotlin code
+    fun triggerWalletConnection() {
+        if (solanaWalletManager == null) {
+            solanaWalletManager = SolanaWalletManager()
+        }
+        // 'this' refers to the WryActivity instance, which is an Activity
+        solanaWalletManager?.initiateConnect(this)
+    }
 }
