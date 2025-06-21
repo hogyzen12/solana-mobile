@@ -4,10 +4,7 @@ import android.app.Activity
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
-import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
-import com.solana.mobilewalletadapter.clientlib.TransactionResult
-import com.solana.mobilewalletadapter.common.util.toBase58 // For logging PublicKey
+import com.solana.mobilewalletadapter.clientlib.*
 import kotlinx.coroutines.launch
 
 class SolanaWalletManager {
