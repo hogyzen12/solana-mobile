@@ -47,4 +47,5 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
     implementation("com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 }
