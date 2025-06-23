@@ -1,10 +1,9 @@
 use jni::{
-    objects::{JClass, JString}, // Removed GlobalRef, JObject
-    JNIEnv,
-    JavaVM,
+    objects::{JClass, JString},
+    JNIEnv, JavaVM,
 };
 use once_cell::sync::OnceCell;
-use std::ffi::c_void; // Removed sync::Once
+use std::ffi::c_void;
 
 /// Global, immutable JavaVM pointer – initialised in `JNI_OnLoad`.
 static JVM: OnceCell<JavaVM> = OnceCell::new();
@@ -12,12 +11,12 @@ static JVM: OnceCell<JavaVM> = OnceCell::new();
 /// Convenience: get a JNIEnv for *this* thread, attaching if necessary.
 fn with_env<F, R>(f: F) -> R
 where
-    F: FnOnce(&mut JNIEnv) -> R, // Changed to &mut JNIEnv
+    F: FnOnce(&mut JNIEnv) -> R,
 {
     let vm = JVM.get().expect("JavaVM not initialised");
     // attach_current_thread returns a guard that detaches on Drop
-    let mut guard = vm.attach_current_thread().expect("attach failed"); // Made mutable
-    f(&mut guard) // Passed as mutable
+    let mut guard = vm.attach_current_thread().expect("attach failed");
+    f(&mut guard)
 }
 
 /* ---------- JNI entry-points ---------- */
@@ -41,11 +40,10 @@ pub unsafe extern "system" fn JNI_OnLoad(
 /// `external fun getHardcodedStringFromRust(): String`
 #[no_mangle]
 pub extern "system" fn Java_dev_dioxus_main_DioxusJNI_getHardcodedStringFromRust(
-    mut env: JNIEnv, // Made mutable
+    mut env: JNIEnv,
     _klass: JClass,
 ) -> jni::sys::jstring {
     match get_hardcoded_string(&mut env) {
-        // Pass as mutable
         Ok(rust_string) => env.new_string(rust_string).unwrap().into_raw(),
         Err(e) => {
             let msg = env.new_string(format!("{:?}", e)).unwrap();
