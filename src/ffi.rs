@@ -1,7 +1,4 @@
-use jni::{
-    objects::{JClass, JString},
-    JNIEnv, JavaVM,
-};
+use jni::{objects::JString, JNIEnv, JavaVM};
 use once_cell::sync::OnceCell;
 use std::ffi::c_void;
 
@@ -33,23 +30,6 @@ pub unsafe extern "system" fn JNI_OnLoad(
     JVM.set(java_vm).expect("JavaVM already set");
     // Tell Dalvik/ART which JNI version we support.
     jni::sys::JNI_VERSION_1_6
-}
-
-/// Kotlin calls this static method to test round‑trip.
-/// Signature in Kotlin:  
-/// `external fun getHardcodedStringFromRust(): String`
-#[no_mangle]
-pub extern "system" fn Java_dev_dioxus_main_DioxusJNI_getHardcodedStringFromRust(
-    mut env: JNIEnv,
-    _klass: JClass,
-) -> jni::sys::jstring {
-    match get_hardcoded_string(&mut env) {
-        Ok(rust_string) => env.new_string(rust_string).unwrap().into_raw(),
-        Err(e) => {
-            let msg = env.new_string(format!("{:?}", e)).unwrap();
-            msg.into_raw()
-        }
-    }
 }
 
 /* ---------- Rust helpers ---------- */
