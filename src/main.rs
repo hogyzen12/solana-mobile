@@ -33,16 +33,20 @@ fn App() -> Element {
 
 #[component]
 pub fn Hero() -> Element {
+    let mut hellos: Signal<Vec<String>> = use_signal(|| vec![]);
     rsx! {
         div { id: "hero",
             img { src: HEADER_SVG, id: "header" }
             button {
                 onclick: move |_| {
                     let string = crate::ffi::call_kotlin_get_string();
-                    log::debug!("look here's the string from kotlin: {}", string);
+                    hellos.push(string);
                 },
-                "click here ok ok"
+                "hellooo"
             }
+        }
+        for h in hellos.cloned() {
+            div { "{h}" }
         }
     }
 }
