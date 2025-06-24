@@ -42,7 +42,7 @@ pub fn Hero() -> Element {
                     let string = crate::ffi::call_kotlin_get_string();
                     hellos.push(string);
                 },
-                "hellooo"
+                "proof"
             }
         }
         for h in hellos.cloned() {
