@@ -1,7 +1,8 @@
 use jni::sys::jobject; // Added for jobject type
 use jni::{
-    objects::{JClass, JObject, JString, JValue, GlobalRef}, // Added GlobalRef
-    JNIEnv, JavaVM,
+    objects::{GlobalRef, JClass, JObject, JString, JValue}, // Added GlobalRef
+    JNIEnv,
+    JavaVM,
 };
 use once_cell::sync::OnceCell;
 
@@ -57,12 +58,12 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_dev_dioxus_main_WryActivity_create(
-    mut env: JNIEnv,
+    env: JNIEnv,
     // In Kotlin: `create(this)` is called on a WryActivity instance.
     // `external fun create(activity: WryActivity)`
     // So, `thiz_activity_obj` is the WryActivity instance on which `create` is invoked.
     // And `activity_arg_obj` is also that same WryActivity instance, passed as the argument.
-    _thiz_activity_obj: JObject, 
+    _thiz_activity_obj: JObject,
     activity_arg_obj: JObject,
 ) {
     match env.new_global_ref(activity_arg_obj) {
@@ -168,16 +169,19 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
         // This local reference is valid only for the duration of this JNIEnv (inside this closure).
         let activity_jobject_local_ref = activity_global_ref.as_obj();
 
-        // Convert the JObject (local ref) to a raw jobject, which is what 
+        // Convert the JObject (local ref) to a raw jobject, which is what
         // our `do_establish_mwa_session` helper expects.
-        let raw_activity_jobject: jobject = activity_jobject_local_ref.into_raw();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
 
         // Now call the helper function that actually performs the JNI call to Kotlin
         match do_establish_mwa_session(env, raw_activity_jobject) {
             Ok(s) => s,
             Err(e) => {
                 log::error!("JNI error in initiate_mwa_session_from_dioxus when calling do_establish_mwa_session: {:?}", e);
-                format!("JNI call from Dioxus to establishMwaSession failed: {:?}", e)
+                format!(
+                    "JNI call from Dioxus to establishMwaSession failed: {:?}",
+                    e
+                )
             }
         }
     })
