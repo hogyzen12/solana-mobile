@@ -1,12 +1,14 @@
 use jni::sys::jobject; // Added for jobject type
 use jni::{
-    objects::{JClass, JObject, JString, JValue},
+    objects::{JClass, JObject, JString, JValue, GlobalRef}, // Added GlobalRef
     JNIEnv, JavaVM,
 };
 use once_cell::sync::OnceCell;
 
 /// Global, immutable JavaVM pointer – initialised in `JNI_OnLoad`.
 static JVM: OnceCell<JavaVM> = OnceCell::new();
+/// Global, immutable WryActivity jobject – initialised in `Java_dev_dioxus_main_WryActivity_create`.
+static WRY_ACTIVITY: OnceCell<GlobalRef> = OnceCell::new();
 
 /// Convenience: get a JNIEnv for *this* thread, attaching if necessary.
 fn with_env<F, R>(f: F) -> R
@@ -48,6 +50,31 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
             eprintln!("JNI: failed to get JavaVM pointer in cacheVm: {:?}", e);
             // Consider panicking in debug builds or a more robust error handling strategy.
             // panic!("JNI: failed to get JavaVM pointer in cacheVm: {:?}", e);
+        }
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_WryActivity_create(
+    mut env: JNIEnv,
+    // In Kotlin: `create(this)` is called on a WryActivity instance.
+    // `external fun create(activity: WryActivity)`
+    // So, `thiz_activity_obj` is the WryActivity instance on which `create` is invoked.
+    // And `activity_arg_obj` is also that same WryActivity instance, passed as the argument.
+    _thiz_activity_obj: JObject, 
+    activity_arg_obj: JObject,
+) {
+    match env.new_global_ref(activity_arg_obj) {
+        Ok(global_ref) => {
+            if WRY_ACTIVITY.set(global_ref).is_err() {
+                // This case means WRY_ACTIVITY was already set. The new global_ref passed to set()
+                // is returned in the Err variant and will be dropped, automatically deleting the JNI ref.
+                eprintln!("JNI: WRY_ACTIVITY global ref was already set. New ref dropped.");
+            }
+        }
+        Err(e) => {
+            eprintln!("JNI: failed to create global ref for WryActivity: {:?}", e);
         }
     }
 }
@@ -119,6 +146,39 @@ pub fn call_kotlin_get_string() -> String {
         Err(e) => {
             log::error!("JNI error: {:?}", e);
             String::from("JNI error")
+        }
+    })
+}
+
+// New function callable from Dioxus to initiate MWA session
+pub fn initiate_mwa_session_from_dioxus() -> String {
+    // Get the globally stored WryActivity GlobalRef
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. MWA session cannot be initiated from Dioxus. Ensure WryActivity.create() has been called by the Android lifecycle.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+
+    // Use with_env to get a JNIEnv for the current thread
+    with_env(|env| {
+        // Get a JObject (local reference) from the GlobalRef.
+        // This local reference is valid only for the duration of this JNIEnv (inside this closure).
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+
+        // Convert the JObject (local ref) to a raw jobject, which is what 
+        // our `do_establish_mwa_session` helper expects.
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.into_raw();
+
+        // Now call the helper function that actually performs the JNI call to Kotlin
+        match do_establish_mwa_session(env, raw_activity_jobject) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("JNI error in initiate_mwa_session_from_dioxus when calling do_establish_mwa_session: {:?}", e);
+                format!("JNI call from Dioxus to establishMwaSession failed: {:?}", e)
+            }
         }
     })
 }

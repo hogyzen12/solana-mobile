@@ -39,7 +39,7 @@ pub fn Hero() -> Element {
             img { src: HEADER_SVG, id: "header" }
             button {
                 onclick: move |_| {
-                    let string = crate::ffi::call_kotlin_get_string();
+                    let string = crate::ffi::initiate_mwa_session_from_dioxus();
                     hellos.push(string);
                 },
                 "proof"
