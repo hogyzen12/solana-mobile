@@ -1,6 +1,8 @@
-use jni::{objects::JString, JNIEnv, JavaVM};
+use jni::{
+    objects::{JClass, JString},
+    JNIEnv, JavaVM,
+};
 use once_cell::sync::OnceCell;
-use std::ffi::c_void;
 
 /// Global, immutable JavaVM pointer – initialised in `JNI_OnLoad`.
 static JVM: OnceCell<JavaVM> = OnceCell::new();
@@ -18,18 +20,35 @@ where
 
 /* ---------- JNI entry-points ---------- */
 
-/// Called automatically by Android when the library is loaded.
-/// Caches the JavaVM pointer exactly once.
+/// Called by Kotlin's Ipc.cacheVm() to cache the JavaVM pointer.
+/// Matches Kotlin declaration:
+///
+/// ```kotlin
+/// companion object {
+///   @JvmStatic external fun cacheVm()
+/// }
+/// ```
 #[no_mangle]
-pub unsafe extern "system" fn JNI_OnLoad(
-    vm: *mut jni::sys::JavaVM,
-    _reserved: *mut c_void,
-) -> jni::sys::jint {
-    // SAFETY: vm is valid for the entire process lifetime.
-    let java_vm = JavaVM::from_raw(vm).expect("JNI_OnLoad: invalid VM");
-    JVM.set(java_vm).expect("JavaVM already set");
-    // Tell Dalvik/ART which JNI version we support.
-    jni::sys::JNI_VERSION_1_6
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
+    env: JNIEnv,
+    _class: JClass, // JClass representing dev.dioxus.main.Ipc
+) {
+    match env.get_java_vm() {
+        Ok(vm) => {
+            // Store it once; ignores subsequent calls if already set.
+            JVM.set(vm).ok();
+        }
+        Err(e) => {
+            // It's crucial to handle this error, perhaps by logging or panicking,
+            // as the application cannot function correctly without the JVM pointer.
+            // For now, let's use a log, assuming a logger is set up.
+            // If no logger, this will be a silent failure in release builds.
+            eprintln!("JNI: failed to get JavaVM pointer in cacheVm: {:?}", e);
+            // Consider panicking in debug builds or a more robust error handling strategy.
+            // panic!("JNI: failed to get JavaVM pointer in cacheVm: {:?}", e);
+        }
+    }
 }
 
 /* ---------- Rust helpers ---------- */
@@ -41,11 +60,11 @@ fn get_hardcoded_string(env: &mut JNIEnv) -> jni::errors::Result<String> {
     const METHOD: &str = "getHardcodedString";
     const SIG: &str = "()Ljava/lang/String;";
 
-    // create object
-    let obj = env.new_object(CLASS, "()V", &[])?;
-    // call method
-    let jstr = env.call_method(obj, METHOD, SIG, &[])?.l()?;
-    // convert
+    // Find the class
+    let class = env.find_class(CLASS)?;
+    // Call the static method
+    let jstr = env.call_static_method(class, METHOD, SIG, &[])?.l()?;
+    // Convert the JString to a Rust String
     Ok(env.get_string(&JString::from(jstr))?.into())
 }
 
