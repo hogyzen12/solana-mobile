@@ -57,7 +57,7 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_dev_dioxus_main_WryActivity_create(
+pub extern "system" fn Java_dev_dioxus_main_WryActivity_cacheActivityInstance(
     env: JNIEnv,
     // In Kotlin: `create(this)` is called on a WryActivity instance.
     // `external fun create(activity: WryActivity)`
@@ -187,23 +187,23 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
     })
 }
 
-/// Call Kotlin’s `DioxusUtils#establishMwaSession(ComponentActivity): String`
-///
-/// This function requires a `jobject` that is a valid reference to an
-/// `androidx.activity.ComponentActivity` instance from the Android environment.
-pub fn call_kotlin_establish_mwa_session(activity_jobject: jobject) -> String {
-    // Uses the with_env helper to get a JNIEnv for the current thread and attach/detach.
-    with_env(|env| {
-        // env is &mut JNIEnv
-        match do_establish_mwa_session(env, activity_jobject) {
-            Ok(s) => s,
-            Err(e) => {
-                // Log the error using the log crate.
-                log::error!("JNI error calling DioxusUtils.establishMwaSession: {:?}", e);
-                // Return a formatted error message. Consider if more structured error
-                // handling is needed by the calling Rust code.
-                format!("JNI call to establishMwaSession failed: {:?}", e)
-            }
-        }
-    })
-}
+// /// Call Kotlin’s `DioxusUtils#establishMwaSession(ComponentActivity): String`
+// ///
+// /// This function requires a `jobject` that is a valid reference to an
+// /// `androidx.activity.ComponentActivity` instance from the Android environment.
+// pub fn call_kotlin_establish_mwa_session(activity_jobject: jobject) -> String {
+//     // Uses the with_env helper to get a JNIEnv for the current thread and attach/detach.
+//     with_env(|env| {
+//         // env is &mut JNIEnv
+//         match do_establish_mwa_session(env, activity_jobject) {
+//             Ok(s) => s,
+//             Err(e) => {
+//                 // Log the error using the log crate.
+//                 log::error!("JNI error calling DioxusUtils.establishMwaSession: {:?}", e);
+//                 // Return a formatted error message. Consider if more structured error
+//                 // handling is needed by the calling Rust code.
+//                 format!("JNI call to establishMwaSession failed: {:?}", e)
+//             }
+//         }
+//     })
+// }
