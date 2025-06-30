@@ -57,6 +57,23 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
 
 #[no_mangle]
 #[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_sendPublicKey(
+    mut env: JNIEnv,
+    _class: JClass, // JClass representing dev.dioxus.main.Ipc
+    publicKey: JString,
+) {
+    let pub_key_str: String = match env.get_string(&publicKey) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get public key string from JNI: {:?}", e);
+            "Error retrieving public key string".into()
+        }
+    };
+    log::info!("Received public key from Kotlin: {}", pub_key_str);
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
 pub extern "system" fn Java_dev_dioxus_main_WryActivity_cacheActivityInstance(
     env: JNIEnv,
     // In Kotlin: `create(this)` is called on a WryActivity instance.
