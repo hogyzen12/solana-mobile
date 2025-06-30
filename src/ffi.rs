@@ -3,15 +3,14 @@ use jni::{
     objects::{GlobalRef, JClass, JObject, JString, JValue},
     JNIEnv, JavaVM,
 };
-use once_cell::sync::{Lazy, OnceCell};
-use std::sync::Mutex;
+use once_cell::sync::OnceCell;
+
+use crate::PUBLIC_KEY;
 
 /// Global, immutable JavaVM pointer – initialised in `JNI_OnLoad`.
 static JVM: OnceCell<JavaVM> = OnceCell::new();
 /// Global, immutable WryActivity jobject – initialised in `Java_dev_dioxus_main_WryActivity_create`.
 static WRY_ACTIVITY: OnceCell<GlobalRef> = OnceCell::new();
-/// Global, mutable public key, received from the Kotlin layer.
-static PUBLIC_KEY: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
 /// Convenience: get a JNIEnv for *this* thread, attaching if necessary.
 fn with_env<F, R>(f: F) -> R
@@ -77,10 +76,9 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendPublicKey(
         pub_key_str
     );
 
-    // Lock the mutex and update the public key.
-    // The lock is released automatically when `guard` goes out of scope.
-    let mut guard = PUBLIC_KEY.lock().unwrap();
-    *guard = Some(pub_key_str);
+    PUBLIC_KEY.with_mut(|slot| {
+        *slot = Some(pub_key_str.clone());
+    });
 }
 
 #[no_mangle]
@@ -169,12 +167,12 @@ fn do_establish_mwa_session(
 
 /* ---------- Safe Rust API for the rest of the app ---------- */
 
-/// Safely retrieves the public key that was sent from the Kotlin layer.
-pub fn get_public_key() -> Option<String> {
-    // Lock the mutex and clone the value.
-    // The lock is released automatically when the guard from `lock()` is dropped.
-    PUBLIC_KEY.lock().unwrap().clone()
-}
+// /// Safely retrieves the public key that was sent from the Kotlin layer.
+// pub fn get_public_key() -> Option<String> {
+//     // Lock the mutex and clone the value.
+//     // The lock is released automatically when the guard from `lock()` is dropped.
+//     PUBLIC_KEY.lock().unwrap().clone()
+// }
 
 pub fn call_kotlin_get_string() -> String {
     with_env(|env| match get_hardcoded_string(env) {

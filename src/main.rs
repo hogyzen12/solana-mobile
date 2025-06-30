@@ -17,6 +17,9 @@ const MAIN_CSS: Asset = asset!("/assets/main.css");
 const HEADER_SVG: Asset = asset!("/assets/header.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
+pub static PUBLIC_KEY: GlobalSignal<Option<String>> =
+    Global::new(|| SyncSignal::new_maybe_sync(None)());
+
 fn main() {
     dioxus::launch(App);
 }
@@ -33,6 +36,13 @@ fn App() -> Element {
 
 #[component]
 pub fn Hero() -> Element {
+    let pubkey = use_memo(|| {
+        let p = PUBLIC_KEY.cloned();
+        match p {
+            Some(string) => string,
+            None => "no pubkey yet".to_string(),
+        }
+    });
     rsx! {
         div { id: "hero",
             img { src: HEADER_SVG, id: "header" }
@@ -44,6 +54,7 @@ pub fn Hero() -> Element {
                 "proof"
             }
         }
+        div { "{pubkey}" }
     }
 }
 
