@@ -36,12 +36,14 @@ fn App() -> Element {
 
 #[component]
 pub fn Hero() -> Element {
-    let pubkey = use_memo(|| {
+    let mut pubkey = use_signal(|| "no pubkey yet".to_string());
+    use_effect(move || {
         let p = PUBLIC_KEY.cloned();
-        match p {
+        let p = match p {
             Some(string) => string,
             None => "no pubkey yet".to_string(),
-        }
+        };
+        pubkey.set(p);
     });
     rsx! {
         div { id: "hero",
