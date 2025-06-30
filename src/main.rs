@@ -40,7 +40,7 @@ pub fn Hero() -> Element {
             button {
                 onclick: move |_| {
                     let string = crate::ffi::initiate_mwa_session_from_dioxus();
-                    hellos.push(string);
+                    log::debug!("session string: {:?}", string);
                 },
                 "proof"
             }
