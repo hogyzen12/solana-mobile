@@ -33,7 +33,6 @@ fn App() -> Element {
 
 #[component]
 pub fn Hero() -> Element {
-    let mut hellos: Signal<Vec<String>> = use_signal(|| vec![]);
     rsx! {
         div { id: "hero",
             img { src: HEADER_SVG, id: "header" }
@@ -44,9 +43,6 @@ pub fn Hero() -> Element {
                 },
                 "proof"
             }
-        }
-        for h in hellos.cloned() {
-            div { "{h}" }
         }
     }
 }
