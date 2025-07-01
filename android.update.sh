@@ -1,6 +1,9 @@
 #!/bin/bash
 # android.update.sh - Build an APK set from the AAB and install it on a connected Android device
 
+# Env
+source ./android.env
+
 # Paths
 APP_NAME="mobile"
 AAB_FILE="./dist/android/${APP_NAME}-release.aab"     # Updated path based on android.bundle.sh output

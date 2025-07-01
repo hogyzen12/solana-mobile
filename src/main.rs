@@ -65,8 +65,8 @@ fn App() -> Element {
         if let Some(rx) = RX.get().cloned() {
             while let Ok(msg) = rx.recv().await {
                 match msg {
-                    MsgFromKotlin::Pubkey(string) => {
-                        if let Ok(pubkey) = Pubkey::from_str(string.as_str()) {
+                    MsgFromKotlin::Pubkey(base58) => {
+                        if let Ok(pubkey) = Pubkey::from_str(base58.as_str()) {
                             wallet_state.set(WalletState(pubkey));
                         }
                     }

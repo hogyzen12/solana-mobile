@@ -3,6 +3,9 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Env
+source ./android.env
+
 # --- Configuration ---
 APP_NAME="mobile"
 # Relative path to the root of the Dioxus-generated Android project
