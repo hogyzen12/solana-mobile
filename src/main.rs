@@ -17,16 +17,19 @@ pub fn send_public_key_from_ffi(pk: String) {
         let (tx, rx) = mpsc::channel::<String>();
 
         // Spawn a dedicated thread to listen for messages.
-        std::thread::spawn(move || {
+        spawn(async move {
+            let mut wallet_state: Signal<WalletState> = use_context();
             // Loop forever, waiting for messages on the receiver.
             // This loop will only end if the sender is dropped, which should only happen
             // when the application is shutting down.
             for received_pk in rx {
                 log::info!("Receiver thread got public key: {}", received_pk);
                 // Update the global signal. This will trigger UI updates.
-                *PUBLIC_KEY.write() = Some(received_pk);
+                *wallet_state.write() = WalletState(received_pk);
             }
-            log::warn!("IPC receiver thread shutting down. This should not happen in normal operation.");
+            log::warn!(
+                "IPC receiver thread shutting down. This should not happen in normal operation."
+            );
         });
 
         // The closure returns the sender, which is then stored in the OnceCell.
@@ -56,9 +59,8 @@ const MAIN_CSS: Asset = asset!("/assets/main.css");
 const HEADER_SVG: Asset = asset!("/assets/header.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
-// The GlobalSignal remains the source of truth for the UI.
-static PUBLIC_KEY: GlobalSignal<Option<String>> =
-    GlobalSignal::new(|| SyncSignal::new_maybe_sync(None)());
+#[derive(Debug, Clone)]
+pub struct WalletState(String);
 
 fn main() {
     // Set up our logger before launching the app.
@@ -71,6 +73,8 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    let wallet_state = use_signal(|| WalletState("no pubkey yet".to_string()));
+    use_context_provider(|| wallet_state);
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
@@ -81,8 +85,7 @@ fn App() -> Element {
 
 #[component]
 pub fn Hero() -> Element {
-    // The Hero component now directly reads from the GlobalSignal.
-    // When the receiver thread updates the signal, this component will automatically re-render.
+    let wallet_state = use_context::<Signal<WalletState>>();
     rsx! {
         div { id: "hero",
             img { src: HEADER_SVG, id: "header" }
@@ -94,12 +97,7 @@ pub fn Hero() -> Element {
                 "proof"
             }
         }
-        // Display the public key from the global signal.
-        if let Some(key) = &*PUBLIC_KEY.read() {
-            div { "Public Key: {key}" }
-        } else {
-            div { "No public key yet." }
-        }
+        div { "{wallet_state.cloned().0}" }
     }
 }
 
