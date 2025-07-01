@@ -10,38 +10,33 @@ use std::sync::mpsc::{self, Sender};
 static IPC_SENDER: OnceCell<Sender<String>> = OnceCell::new();
 
 // 2. A public function for the FFI layer to send messages.
-// This function will be called from `ffi.rs`.
+// This function uses `get_or_init` to safely initialize the channel and receiver thread exactly once.
 pub fn send_public_key_from_ffi(pk: String) {
-    if let Some(sender) = IPC_SENDER.get() {
-        if let Err(e) = sender.send(pk) {
-            log::error!("Failed to send public key through channel: {}", e);
-        }
-    } else {
-        log::error!("IPC_SENDER not initialized");
-    }
-}
+    let sender = IPC_SENDER.get_or_init(|| {
+        log::info!("Initializing IPC channel and spawning receiver thread.");
+        let (tx, rx) = mpsc::channel::<String>();
 
-// 3. The setup function to be called once at startup.
-fn setup_ipc_channel() {
-    let (tx, rx) = mpsc::channel::<String>();
+        // Spawn a dedicated thread to listen for messages.
+        std::thread::spawn(move || {
+            // Loop forever, waiting for messages on the receiver.
+            // This loop will only end if the sender is dropped, which should only happen
+            // when the application is shutting down.
+            for received_pk in rx {
+                log::info!("Receiver thread got public key: {}", received_pk);
+                // Update the global signal. This will trigger UI updates.
+                *PUBLIC_KEY.write() = Some(received_pk);
+            }
+            log::warn!("IPC receiver thread shutting down. This should not happen in normal operation.");
+        });
 
-    // Store the sender in our static OnceCell.
-    // If this fails, it means the channel is already set up, which is fine.
-    if IPC_SENDER.set(tx).is_err() {
-        log::warn!("IPC_SENDER was already initialized.");
-        return;
-    }
-
-    // Spawn a dedicated thread to listen for messages.
-    std::thread::spawn(move || {
-        // Loop forever, waiting for messages on the receiver.
-        for received_pk in rx {
-            log::info!("Receiver thread got public key: {}", received_pk);
-            // Update the global signal. This will trigger UI updates.
-            *PUBLIC_KEY.write() = Some(received_pk);
-        }
-        log::info!("IPC receiver thread shutting down.");
+        // The closure returns the sender, which is then stored in the OnceCell.
+        tx
     });
+
+    // Now that we have a sender, try to send the public key.
+    if let Err(e) = sender.send(pk) {
+        log::error!("Failed to send public key through channel: {}", e);
+    }
 }
 
 // --- Dioxus App Setup ---
@@ -66,11 +61,11 @@ static PUBLIC_KEY: GlobalSignal<Option<String>> =
     GlobalSignal::new(|| SyncSignal::new_maybe_sync(None)());
 
 fn main() {
-    // Set up our logger and the IPC channel before launching the app.
+    // Set up our logger before launching the app.
+    // The IPC channel is now initialized on demand.
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
     );
-    setup_ipc_channel();
     dioxus::launch(App);
 }
 
