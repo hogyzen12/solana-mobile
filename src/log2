@@ -1,0 +1,986 @@
+
+06-30 17:20:17.051  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.052  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:17.053  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:17.053  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 2 to 0
+06-30 17:20:17.093  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.116  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.126  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.134  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.143  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.151  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.167  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.193  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.201  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.227  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.234  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.260  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.267  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.292  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.309  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.325  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.342  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.359  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.375  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.401  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.408  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.434  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.441  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.468  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.475  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.500  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.516  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.526  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.533  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.550  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.566  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.574  7296  7381 D DioxusMWA: establishMwaSession called for activity: dev.dioxus.main.MainActivity@a5dd626
+06-30 17:20:17.574  7296  7381 D DioxusMWA: MobileWalletAdapter instance created. ConnectionIdentity: Dioxus Demo App
+06-30 17:20:17.575  7296  7381 D DioxusMWA: MWA authorization process initiated. Check Logcat for 'DioxusMWA' for asynchronous result.
+06-30 17:20:17.575  7296  7381 D mobile  : session string: "MWA authorization process initiated. Check Logcat for 'DioxusMWA' for asynchronous result."
+06-30 17:20:17.575  7296  7752 D DioxusMWA: Attempting MWA transaction for authorization...
+06-30 17:20:17.576  7296  7752 V LocalAssociationScenario: Creating local association scenario for ws://127.0.0.1:51852/solana-wallet
+06-30 17:20:17.587  2345  4667 D ActivityTrigger: ActivityTrigger activityPauseTrigger
+06-30 17:20:17.587  3144  3214 I DynamicDDSService: handleMessage(ACTIVITY_INVOKE{appInfo=com.solflare.mobile isFullScreen=}true)
+06-30 17:20:17.588  2345  4667 E Transition: Trying to add a ready-group twice: Display{#0 state=ON size=1080x2400 ROTATION_0}
+06-30 17:20:17.588  2345  4667 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW cat=[android.intent.category.BROWSABLE] dat=solana-wallet:/... cmp=com.solflare.mobile/.MainActivity} with LAUNCH_SINGLE_TASK from uid 10258 (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+06-30 17:20:17.588  2967  3007 V WindowManagerShell: Transition requested: android.os.BinderProxy@622d3be TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=109 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.example.Mobile/dev.dioxus.main.MainActivity } baseActivity=ComponentInfo{com.example.Mobile/dev.dioxus.main.MainActivity} topActivity=ComponentInfo{com.solflare.mobile/com.solflare.mobile.MainActivity} origActivity=null realActivity=ComponentInfo{com.example.Mobile/dev.dioxus.main.MainActivity} numActivities=2 lastActiveTime=966111380 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@c4c3c1f} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 118 - 0, 0) topActivityInfo=ActivityInfo{5c13b6c com.solflare.mobile.MainActivity} launchCookies=[android.os.BinderProxy@7fd35a8] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+06-30 17:20:17.591  2345  4667 I ActivityTaskManager: The Process com.solflare.mobile Already Exists in BG. So sending its PID: 27590
+06-30 17:20:17.591  1393  1451 W ANDR-PERF-LM: MetaMeter: handlePrimaryAsync() 118: AdaptLaunch MetaMeter. No MeterMgr Available to handle this Primary Async. !!!!
+06-30 17:20:17.591  1393  1451 W ANDR-PERF-LM: MetaMeter: handlePrimaryAsync() 118: AdaptLaunch MetaMeter. No MeterMgr Available to handle this Primary Async. !!!!
+06-30 17:20:17.591  1393  1451 E ANDR-PERF-LM: MetaMeter: handleAsync() 166: AdaptLaunch Invalid Async
+06-30 17:20:17.593  2345  4667 D ActivityManager: quick sync unfreeze 27590 for 1
+06-30 17:20:17.596  2345  2499 D ActivityManager: sync unfroze 27590 com.solflare.mobile for 1
+06-30 17:20:17.597  2345  2499 D ActivityManager: sync unfroze 27882 com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0 for 1
+06-30 17:20:17.597  2345  2499 D ActivityManager: sync unfroze 23310 com.google.android.gms for 1
+06-30 17:20:17.597  2345  2499 D ActivityManager: sync unfroze 32439 com.solanamobile.seedvaultimpl for 1
+06-30 17:20:17.599  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.600  1466  1466 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+06-30 17:20:17.605 23310 23310 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.safebrowsing.SafeBrowsingService.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+06-30 17:20:17.607  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.624  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.632  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: QUALCOMM build          : 72d8b177be, I020fdb6434
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Build Date              : 02/27/24
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Shader Compiler Version : EV031.36.08.28
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Local Branch            :
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Remote Branch           : refs/tags/AU_LINUX_ANDROID_LA.VENDOR.1.0.11.00.00.770.073
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Remote Branch           : NONE
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Reconstruct Branch      : NOTHING
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Build Config            : S P 12.1.1 AArch64
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Driver Path             : /vendor/lib64/hw/vulkan.adreno.so
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Driver Version          : 0615.84
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: PFP                     : 0x01730158
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: ME                      : 0x00000000
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Application Name    : Impeller
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Application Version : 0x00400000
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Engine Name         : Impeller
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Engine Version      : 0x00400000
+06-30 17:20:17.637 27590 27590 I AdrenoVK-0: Api Version         : 0x00401000
+06-30 17:20:17.644 27590 27590 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(60)] Using the Impeller rendering backend (Vulkan).
+06-30 17:20:17.666  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.674  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.675 27590 27590 D com.llfbandit.app_links: Intent { act=android.intent.action.VIEW cat=[android.intent.category.BROWSABLE] dat=solana-wallet:/... flg=0x10000000 cmp=com.solflare.mobile/.MainActivity }
+06-30 17:20:17.676 27590 27590 D com.llfbandit.app_links: Handled intent: action: android.intent.action.VIEW / data: solana-wallet:/v1/associate/local?association=BAXrnQLc7ZBw0NuRrbPi8qgQEV3cXiXCGr_8qdVZnDabSctbTP9Ray3YiEey9i53IclXyIbSKywtL8_3A4m8rNI&port=51852&v=1
+06-30 17:20:17.682  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.685 27590 27796 D SessionLifecycleClient: Sending lifecycle 1 to service
+06-30 17:20:17.685 27590 27802 D SessionLifecycleService: Activity foregrounding at 306675835.
+06-30 17:20:17.697  2345  4667 D CoreBackPreview: Window{fbbdf6 u0 com.solflare.mobile/com.solflare.mobile.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@d0efc64, mPriority=0, mIsAnimationCallback=false}
+06-30 17:20:17.706 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.706 27590  8060 E Gralloc4: isSupported(1, 1, 56, 1, ...) failed with 5
+06-30 17:20:17.707  1363  1363 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.707  1363  1363 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.707  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  1363 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.707  1363  1363 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.707  1363  1363 E qdgralloc: gralloc failed to allocate err=Invalid argument format 56 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.707 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 56 usage b00: 5
+06-30 17:20:17.707 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.707 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.707 27590  8060 E Gralloc4: isSupported(1, 1, 59, 1, ...) failed with 5
+06-30 17:20:17.707  1363  1363 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.707  1363  1363 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.707  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  1363 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.707  1363  1363 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.707  1363  1363 E qdgralloc: gralloc failed to allocate err=Invalid argument format 59 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.707 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 59 usage b00: 5
+06-30 17:20:17.707 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.707 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.707 27590  8060 E Gralloc4: isSupported(1, 1, 56, 1, ...) failed with 5
+06-30 17:20:17.707  1363  1419 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.707  1363  1419 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.707  1363  1419 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  1419 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  1419 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.707  1363  1419 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.707  1363  1419 E qdgralloc: gralloc failed to allocate err=Invalid argument format 56 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.707 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 56 usage b00: 5
+06-30 17:20:17.707 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.707 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.707 27590  8060 E Gralloc4: isSupported(1, 1, 59, 1, ...) failed with 5
+06-30 17:20:17.707  1363  7266 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.707  1363  7266 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.707  1363  7266 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  7266 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.707  1363  7266 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.707  1363  7266 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.707  1363  7266 E qdgralloc: gralloc failed to allocate err=Invalid argument format 59 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.707 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 59 usage b00: 5
+06-30 17:20:17.707 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.708  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.708 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.709 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.709 27590 27745 E OpenGLRenderer: Unable to match the desired swap behavior.
+06-30 17:20:17.709 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.709 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.710 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.716  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.722 27590 27590 V FlutterSeedVaultSdkPlugin - eventChannel.setStreamHandler: onListen
+06-30 17:20:17.722 27590 27590 V FlutterSeedVaultSdkPlugin - eventChannelPoSM.setStreamHandler: onListen
+06-30 17:20:17.724  2345  3653 D ConnectivityService: requestNetwork for uid/pid:10214/27590 activeRequest: null callbackRequest: 2458 [NetworkRequest [ REQUEST id=2459, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10214 RequestorUid: 10214 RequestorPkg: com.solflare.mobile UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: ALL
+06-30 17:20:17.725  2345  2900 D ConnectivityService: NetReassign [2459 : null → 106] [c 0] [a 0] [i 1]
+06-30 17:20:17.725  2345  2892 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=2459, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10214 RequestorUid: 10214 RequestorPkg: com.solflare.mobile UnderlyingNetworks: Null] ]
+06-30 17:20:17.725  2345  2892 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=2459, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10214 RequestorUid: 10214 RequestorPkg: com.solflare.mobile UnderlyingNetworks: Null] ]
+06-30 17:20:17.725  2345  2892 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=2459, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10214 RequestorUid: 10214 RequestorPkg: com.solflare.mobile UnderlyingNetworks: Null] ]
+06-30 17:20:17.725  2345  2892 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=2459, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10214 RequestorUid: 10214 RequestorPkg: com.solflare.mobile UnderlyingNetworks: Null] ]
+06-30 17:20:17.739  7296  8058 V MobileWalletAdapterWebSocket: MobileWalletAdapterWebSocket-ctor
+06-30 17:20:17.739  7296  8058 V MobileWalletAdapterWebSocket: connect
+06-30 17:20:17.740  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket: WebSockets error
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket: com.neovisionaries.ws.client.WebSocketException: Failed to connect to '127.0.0.1:51852': failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37302) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connectSocket(SocketConnector.java:126)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.doConnect(SocketConnector.java:238)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connect(SocketConnector.java:189)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocket.connect(WebSocket.java:2351)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.ConnectThread.runMain(ConnectThread.java:32)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocketThread.run(WebSocketThread.java:45)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket: Caused by: java.net.ConnectException: failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37302) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:347)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connectErrno(IoBridge.java:237)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connect(IoBridge.java:179)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at java.net.PlainSocketImpl.socketConnect(PlainSocketImpl.java:142)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.doConnect(AbstractPlainSocketImpl.java:390)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connectToAddress(AbstractPlainSocketImpl.java:230)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connect(AbstractPlainSocketImpl.java:212)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at java.net.SocksSocketImpl.connect(SocksSocketImpl.java:436)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at java.net.Socket.connect(Socket.java:646)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketInitiator$SocketRacer.run(SocketInitiator.java:126)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket: Caused by: android.system.ErrnoException: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:334)
+06-30 17:20:17.743  7296  8075 W MobileWalletAdapterWebSocket:  ... 9 more
+06-30 17:20:17.743  7296  8075 D LocalAssociationScenario: Connect attempt failed, retrying in 150 ms
+06-30 17:20:17.757  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.757  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.759  2345  4667 W TelephonyPermissions: reportAccessDeniedToReadIdentifiers:com.solflare.mobile:getSerial:-1
+06-30 17:20:17.760 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.761 27590  8060 E Gralloc4: isSupported(1, 1, 56, 1, ...) failed with 5
+06-30 17:20:17.761  1363  1363 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.761  1363  1363 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.761  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1363 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.761  1363  1363 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.761  1363  1363 E qdgralloc: gralloc failed to allocate err=Invalid argument format 56 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.761 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 56 usage b00: 5
+06-30 17:20:17.761 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.761 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.761 27590  8060 E Gralloc4: isSupported(1, 1, 59, 1, ...) failed with 5
+06-30 17:20:17.761  1363  1419 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.761  1363  1419 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.761  1363  1419 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1419 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1419 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.761  1363  1419 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.761  1363  1419 E qdgralloc: gralloc failed to allocate err=Invalid argument format 59 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.761 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 59 usage b00: 5
+06-30 17:20:17.761 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.761 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.761 27590  8060 E Gralloc4: isSupported(1, 1, 56, 1, ...) failed with 5
+06-30 17:20:17.761  1363  1419 E qdgralloc: GetSize: Unrecognized pixel format: 0x38
+06-30 17:20:17.761  1363  1419 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.761  1363  1419 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1419 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1419 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.761  1363  1419 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.761  1363  1419 E qdgralloc: gralloc failed to allocate err=Invalid argument format 56 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.761 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 56 usage b00: 5
+06-30 17:20:17.761 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.761 27590  8060 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.761 27590  8060 E Gralloc4: isSupported(1, 1, 59, 1, ...) failed with 5
+06-30 17:20:17.761  1363  1363 E qdgralloc: GetSize: Unrecognized pixel format: 0x3b
+06-30 17:20:17.761  1363  1363 E DMABUFHEAPS: Unable to allocate from DMA-BUF heap: qcom,system: Invalid argument
+06-30 17:20:17.761  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1363 E DMABUFHEAPS: No ion heap of name qcom,system exists
+06-30 17:20:17.761  1363  1363 E qdgralloc: libdma alloc failed ion_fd -22 size 0 align 4096 heap_name qcom,system flags 0
+06-30 17:20:17.761  1363  1363 E qdgralloc: AllocateMem: Failed to allocate buffer - heap name: qcom,system flags: 0x0 ret: -22
+06-30 17:20:17.761  1363  1363 E qdgralloc: gralloc failed to allocate err=Invalid argument format 59 size 0 WxH 4x4 usage 2816
+06-30 17:20:17.761 27590  8060 E GraphicBufferAllocator: Failed to allocate (4 x 4) layerCount 1 format 59 usage b00: 5
+06-30 17:20:17.761 27590  8060 E AHardwareBuffer: GraphicBuffer(w=4, h=4, lc=1) failed (Unknown error -5), handle=0x0
+06-30 17:20:17.761 27590  8060 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+06-30 17:20:17.762 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.762 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.763 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.763  2345  2496 I ActivityTaskManager: Displayed com.solflare.mobile/.MainActivity for user 0: +178ms
+06-30 17:20:17.763 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.763 27590  8060 W qdgralloc: getInterlacedFlag: getMetaData returned -22, defaulting to interlaced_flag = 0
+06-30 17:20:17.764  2345  2496 V WindowManager: Sent Transition #500 createdAt=06-30 17:20:17.581 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=109 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.example.Mobile/dev.dioxus.main.MainActivity } baseActivity=ComponentInfo{com.example.Mobile/dev.dioxus.main.MainActivity} topActivity=ComponentInfo{com.solflare.mobile/com.solflare.mobile.MainActivity} origActivity=null realActivity=ComponentInfo{com.example.Mobile/dev.dioxus.main.MainActivity} numActivities=2 lastActiveTime=966111380 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{f59e3c9 Task{5b1e2a #109 type=standard A=10258:com.example.Mobile}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 118 - 0, 0) topActivityInfo=ActivityInfo{1f01a01 com.solflare.mobile.MainActivity} launchCookies=[android.os.BinderProxy@9f36def] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+06-30 17:20:17.764  2345  2496 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+06-30 17:20:17.764  2967  3007 V WindowManagerShell: onTransitionReady android.os.BinderProxy@622d3be: {id=500 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=OPEN f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0x4e96535 sb=Rect(0, 0 - 0, 0) eb=Rect(0, 0 - 1080, 2400) d=-1->0 r=-1->0:-1},{null m=TO_BACK f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0x346dca sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:17.764  2967  3007 V WindowManagerShell: Playing animation for (#500)android.os.BinderProxy@622d3be@0
+06-30 17:20:17.764  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.transition.DefaultMixedHandler@311586f
+06-30 17:20:17.764  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.keyguard.KeyguardTransitionHandler@4becb6d
+06-30 17:20:17.764  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.activityembedding.ActivityEmbeddingController@a8603a2
+06-30 17:20:17.764  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.recents.RecentsTransitionHandler@1771833
+06-30 17:20:17.764  2967  3007 V ShellRecents: RecentsTransitionHandler.startAnimation: no controller found
+06-30 17:20:17.764  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.pip.PipTransition@38707f0
+06-30 17:20:17.765  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.splitscreen.StageCoordinator@889b169
+06-30 17:20:17.765  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.transition.RemoteTransitionHandler@6e4b7ee
+06-30 17:20:17.765  2345  2496 V WindowManager:     info={id=500 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=OPEN f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0x57c40da sb=Rect(0, 0 - 0, 0) eb=Rect(0, 0 - 1080, 2400) d=-1->0 r=-1->0:-1},{null m=TO_BACK f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0xa331bd sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:17.765  2967  3007 V WindowManagerShell: Transition doesn't have explicit remote, search filters for match for {id=500 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=OPEN f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0x4e96535 sb=Rect(0, 0 - 0, 0) eb=Rect(0, 0 - 1080, 2400) d=-1->0 r=-1->0:-1},{null m=TO_BACK f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0x346dca sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:17.765  2967  3007 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x100 checks=[{atype=home independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=false order=TOP topActivity=ComponentInfo{com.android.launcher3/com.android.searchlauncher.SearchLauncher}},{atype=standard independent=true modes=[CLOSE,TO_BACK] flags=NONE mustBeTask=false order=ANY topActivity=null}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@f81048f, appThread = android.app.IApplicationThread$Stub$Proxy@eecb31c, debugName = QuickstepLaunchHome }}
+06-30 17:20:17.765  2967  3007 V WindowManagerShell:  Delegate animation for #500 to null
+06-30 17:20:17.765  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.transition.DefaultTransitionHandler@d02fb25
+06-30 17:20:17.765  2967  3007 V WindowManagerShell: start default transition animation, info = {id=500 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=OPEN f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0x4e96535 sb=Rect(0, 0 - 0, 0) eb=Rect(0, 0 - 1080, 2400) d=-1->0 r=-1->0:-1},{null m=TO_BACK f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0x346dca sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:17.771  2967  3007 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@3139017 animAttr=0x5 type=OPEN isEntrance=false
+06-30 17:20:17.789  2967  3007 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@1b716b3 animAttr=0x4 type=OPEN isEntrance=true
+06-30 17:20:17.791  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.791  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.791  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.799  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.805  2967  3007 V WindowManagerShell:  animated by com.android.wm.shell.transition.DefaultTransitionHandler@d02fb25
+06-30 17:20:17.807  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.815  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.824  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.849  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.857  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.881  1265  3673 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+06-30 17:20:17.881  1265  3673 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK ON
+06-30 17:20:17.881  1265  3673 D vendor.qti.bluetooth@1.0-wake_lock: Acquire wakelock is acquired
+06-30 17:20:17.881  1265  3673 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Writing IBS_WAKE_ACK
+06-30 17:20:17.882  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.883  3132  3675 I bt_stack: [INFO:btm_ble_gap.cc(3297)] btm_ble_process_adv_pkt_cont Data Complete 25:8a:76:e3:d0:d1
+06-30 17:20:17.883  3132  3675 D bt_btm_ble: bool parse_adv_audio_uuids_from_adv_pkt(const uint8_t *, size_t, uint8_t): tmap_cap_pts: false
+06-30 17:20:17.884  3132  3497 D BluetoothAdapterService: getIdentityAddress null retruning 25:8A:76:E3:D0:D1
+06-30 17:20:17.885  2345  4667 I ImeTracker: com.solflare.mobile:caabbcfe: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+06-30 17:20:17.885  2345  4667 I ImeTracker: com.solflare.mobile:caabbcfe: onCancelled at PHASE_SERVER_SHOULD_HIDE
+06-30 17:20:17.886 24309 24309 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():1984
+06-30 17:20:17.886 24309 24309 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 0, locked = false
+06-30 17:20:17.886 24309 24309 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1248 onStartInput(EditorInfo{EditorInfo{packageName=com.solflare.mobile, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+06-30 17:20:17.887 24309 24309 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 1, locked = false
+06-30 17:20:17.887  2345  2452 W PackageConfigPersister: App-specific configuration not found for packageName: com.solflare.mobile and userId: 0
+06-30 17:20:17.893  7296  8058 V MobileWalletAdapterWebSocket: MobileWalletAdapterWebSocket-ctor
+06-30 17:20:17.893  7296  8058 V MobileWalletAdapterWebSocket: connect
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket: WebSockets error
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket: com.neovisionaries.ws.client.WebSocketException: Failed to connect to '127.0.0.1:51852': failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37306) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connectSocket(SocketConnector.java:126)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.doConnect(SocketConnector.java:238)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connect(SocketConnector.java:189)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocket.connect(WebSocket.java:2351)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.ConnectThread.runMain(ConnectThread.java:32)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocketThread.run(WebSocketThread.java:45)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket: Caused by: java.net.ConnectException: failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37306) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:347)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connectErrno(IoBridge.java:237)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connect(IoBridge.java:179)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at java.net.PlainSocketImpl.socketConnect(PlainSocketImpl.java:142)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.doConnect(AbstractPlainSocketImpl.java:390)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connectToAddress(AbstractPlainSocketImpl.java:230)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connect(AbstractPlainSocketImpl.java:212)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at java.net.SocksSocketImpl.connect(SocksSocketImpl.java:436)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at java.net.Socket.connect(Socket.java:646)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketInitiator$SocketRacer.run(SocketInitiator.java:126)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket: Caused by: android.system.ErrnoException: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:334)
+06-30 17:20:17.897  7296  8085 W MobileWalletAdapterWebSocket:  ... 9 more
+06-30 17:20:17.897  7296  8085 D LocalAssociationScenario: Connect attempt failed, retrying in 200 ms
+06-30 17:20:17.899  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.915  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.922  1265  3673 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+06-30 17:20:17.922  1265  3673 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK OFF
+06-30 17:20:17.923  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.948  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.956  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.981  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:17.998  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:18.072  1265  3502 D vendor.qti.bluetooth@1.0-wake_lock: Release wakelock is released
+06-30 17:20:18.097  7296  8058 V MobileWalletAdapterWebSocket: MobileWalletAdapterWebSocket-ctor
+06-30 17:20:18.098  7296  8058 V MobileWalletAdapterWebSocket: connect
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket: WebSockets error
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket: com.neovisionaries.ws.client.WebSocketException: Failed to connect to '127.0.0.1:51852': failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37308) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connectSocket(SocketConnector.java:126)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.doConnect(SocketConnector.java:238)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connect(SocketConnector.java:189)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocket.connect(WebSocket.java:2351)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.ConnectThread.runMain(ConnectThread.java:32)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocketThread.run(WebSocketThread.java:45)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket: Caused by: java.net.ConnectException: failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37308) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:347)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connectErrno(IoBridge.java:237)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connect(IoBridge.java:179)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at java.net.PlainSocketImpl.socketConnect(PlainSocketImpl.java:142)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.doConnect(AbstractPlainSocketImpl.java:390)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connectToAddress(AbstractPlainSocketImpl.java:230)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connect(AbstractPlainSocketImpl.java:212)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at java.net.SocksSocketImpl.connect(SocksSocketImpl.java:436)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at java.net.Socket.connect(Socket.java:646)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketInitiator$SocketRacer.run(SocketInitiator.java:126)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket: Caused by: android.system.ErrnoException: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:334)
+06-30 17:20:18.100  7296  8087 W MobileWalletAdapterWebSocket:  ... 9 more
+06-30 17:20:18.101  7296  8087 D LocalAssociationScenario: Connect attempt failed, retrying in 500 ms
+06-30 17:20:18.271  2967  3007 V WindowManagerShell: Transition animation finished (aborted=false), notifying core (#500)android.os.BinderProxy@622d3be@0
+06-30 17:20:18.273  2345  2496 V WindowManager: Finish Transition #500: created at 06-30 17:20:17.581 collect-started=0.073ms request-sent=6.594ms started=7.21ms ready=11.91ms sent=177.946ms finished=691.274ms
+06-30 17:20:18.277  2967  3007 V WindowManagerShell: Track 0 became idle
+06-30 17:20:18.277  2967  3007 V WindowManagerShell: All active transition animations finished
+06-30 17:20:18.278  3144  3819 W DynamicDDSService: appName is not found in cache: com.example.Mobile
+06-30 17:20:18.286  3132  3495 I BtGatt.ScanManager: msg.what = 6
+06-30 17:20:18.286  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 1
+06-30 17:20:18.286  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 3
+06-30 17:20:18.289  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:18.289  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:18.539   923   943 D SPL     : Handle Request
+06-30 17:20:18.539   923   943 E SPL     : unknown cmd id [57005]
+06-30 17:20:18.539   923   943 D SPL     : Send Response
+06-30 17:20:18.540   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.540   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.547   923   943 D SPL     : Handle Request
+06-30 17:20:18.547   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.547   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.547   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.547   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.547   923   943 D SPL     : Call poll()
+06-30 17:20:18.547   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.547   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.547   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.547   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.547   923   943 D SPL     : Send Response
+06-30 17:20:18.547   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.547   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.548   923   943 D SPL     : Handle Request
+06-30 17:20:18.548   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.549   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.549   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.549   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.549   923   943 D SPL     : Call poll()
+06-30 17:20:18.577   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.577   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.577   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.577   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.577   923   943 D SPL     : Send Response
+06-30 17:20:18.578   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.578   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.584   923   943 D SPL     : Handle Request
+06-30 17:20:18.584   923   943 E SPL     : unknown cmd id [57005]
+06-30 17:20:18.584   923   943 D SPL     : Send Response
+06-30 17:20:18.585   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.585   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.592   923   943 D SPL     : Handle Request
+06-30 17:20:18.592   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.592   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.592   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.592   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.592   923   943 D SPL     : Call poll()
+06-30 17:20:18.593   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.593   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.593   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.593   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.593   923   943 D SPL     : Send Response
+06-30 17:20:18.593   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.593   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.595   923   943 D SPL     : Handle Request
+06-30 17:20:18.595   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.595   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.595   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.595   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.595   923   943 D SPL     : Call poll()
+06-30 17:20:18.601  7296  8058 V MobileWalletAdapterWebSocket: MobileWalletAdapterWebSocket-ctor
+06-30 17:20:18.601  7296  8058 V MobileWalletAdapterWebSocket: connect
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket: WebSockets error
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket: com.neovisionaries.ws.client.WebSocketException: Failed to connect to '127.0.0.1:51852': failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37320) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connectSocket(SocketConnector.java:126)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.doConnect(SocketConnector.java:238)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connect(SocketConnector.java:189)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocket.connect(WebSocket.java:2351)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.ConnectThread.runMain(ConnectThread.java:32)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocketThread.run(WebSocketThread.java:45)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket: Caused by: java.net.ConnectException: failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37320) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:347)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connectErrno(IoBridge.java:237)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connect(IoBridge.java:179)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at java.net.PlainSocketImpl.socketConnect(PlainSocketImpl.java:142)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.doConnect(AbstractPlainSocketImpl.java:390)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connectToAddress(AbstractPlainSocketImpl.java:230)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connect(AbstractPlainSocketImpl.java:212)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at java.net.SocksSocketImpl.connect(SocksSocketImpl.java:436)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at java.net.Socket.connect(Socket.java:646)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketInitiator$SocketRacer.run(SocketInitiator.java:126)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket: Caused by: android.system.ErrnoException: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:334)
+06-30 17:20:18.606  7296  8092 W MobileWalletAdapterWebSocket:  ... 9 more
+06-30 17:20:18.606  7296  8092 D LocalAssociationScenario: Connect attempt failed, retrying in 500 ms
+06-30 17:20:18.609  1393  4410 E ANDR-PERF-LM: VmRssMeter:: start() 358: Could not find pid, can not collect vmrss data
+06-30 17:20:18.612  1393  4411 E ANDR-PERF-LM: VmRssMeter:: start() 358: Could not find pid, can not collect vmrss data
+06-30 17:20:18.613  1393  4411 E ANDR-PERF-LM: AdaptiveLaunch: writeToDataBase() 64: Meter aborted or could not get meter data for this run
+06-30 17:20:18.620   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.620   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.620   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.620   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.620   923   943 D SPL     : Send Response
+06-30 17:20:18.620   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.620   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.623  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:18.623  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:18.623  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 0 to 2
+06-30 17:20:18.627   923   943 D SPL     : Handle Request
+06-30 17:20:18.627   923   943 E SPL     : unknown cmd id [57005]
+06-30 17:20:18.627   923   943 D SPL     : Send Response
+06-30 17:20:18.627   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.627   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.630   923   943 D SPL     : Handle Request
+06-30 17:20:18.630   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.630   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.630   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.630   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.630   923   943 D SPL     : Call poll()
+06-30 17:20:18.630   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.630   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.630   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.630   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.630   923   943 D SPL     : Send Response
+06-30 17:20:18.630   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.630   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.632   923   943 D SPL     : Handle Request
+06-30 17:20:18.632   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.632   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.632   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.632   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.632   923   943 D SPL     : Call poll()
+06-30 17:20:18.646   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.647   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.647   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.647   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.647   923   943 D SPL     : Send Response
+06-30 17:20:18.647   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.647   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.659   923   943 D SPL     : Handle Request
+06-30 17:20:18.659   923   943 E SPL     : unknown cmd id [57005]
+06-30 17:20:18.659   923   943 D SPL     : Send Response
+06-30 17:20:18.659   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.659   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.666   923   943 D SPL     : Handle Request
+06-30 17:20:18.666   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.666   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.666   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.666   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.666   923   943 D SPL     : Call poll()
+06-30 17:20:18.666   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.666   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.666   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.666   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.666   923   943 D SPL     : Send Response
+06-30 17:20:18.666   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.666   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.668   923   943 D SPL     : Handle Request
+06-30 17:20:18.668   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.668   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.668   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.668   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.668   923   943 D SPL     : Call poll()
+06-30 17:20:18.696  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:18.696  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:18.696   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.696   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.696   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.696   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.696   923   943 D SPL     : Send Response
+06-30 17:20:18.696   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.696   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.697  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 2 to 0
+06-30 17:20:18.702   923   943 D SPL     : Handle Request
+06-30 17:20:18.702   923   943 E SPL     : unknown cmd id [57005]
+06-30 17:20:18.702   923   943 D SPL     : Send Response
+06-30 17:20:18.702   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.702   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.705   923   943 D SPL     : Handle Request
+06-30 17:20:18.705   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.705   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.705   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.705   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.705   923   943 D SPL     : Call poll()
+06-30 17:20:18.706   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.706   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.706   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.706   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.706   923   943 D SPL     : Send Response
+06-30 17:20:18.706   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.706   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.707   923   943 D SPL     : Handle Request
+06-30 17:20:18.707   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.707   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.707   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.707   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.707   923   943 D SPL     : Call poll()
+06-30 17:20:18.769   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.769   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.769   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.769   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.769   923   943 D SPL     : Send Response
+06-30 17:20:18.769   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.769   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.774   923   943 D SPL     : Handle Request
+06-30 17:20:18.774   923   943 E SPL     : unknown cmd id [57005]
+06-30 17:20:18.774   923   943 D SPL     : Send Response
+06-30 17:20:18.774   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.774   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.776  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:18.776  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:18.777  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 0 to 2
+06-30 17:20:18.779   923   943 D SPL     : Handle Request
+06-30 17:20:18.779   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.779   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.779   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.779   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.779   923   943 D SPL     : Call poll()
+06-30 17:20:18.779   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.779   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.779   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.779   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.779   923   943 D SPL     : Send Response
+06-30 17:20:18.779   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.779   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.781   923   943 D SPL     : Handle Request
+06-30 17:20:18.781   923   943 D SPL     : Dev node [/dev/qsee_ipc_irq_spss] opened OK.
+06-30 17:20:18.781   923   943 D SPL     : timeout_msec [120000]
+06-30 17:20:18.781   923   943 D SPL     : pfd[0].fd [29].
+06-30 17:20:18.781   923   943 D SPL     : pfd[1].fd [26].
+06-30 17:20:18.781   923   943 D SPL     : Call poll()
+06-30 17:20:18.799   923   943 D SPL     : poll() ret [1].
+06-30 17:20:18.799   923   943 D SPL     : pfd[0].revents [0x1].
+06-30 17:20:18.799   923   943 D SPL     : pfd[1].revents [0x0].
+06-30 17:20:18.799   923   943 D SPL     : IRQ Detected OK.
+06-30 17:20:18.799   923   943 D SPL     : Send Response
+06-30 17:20:18.800   923   943 D SPL     : QSEECom_send_resp() OK.
+06-30 17:20:18.800   923   943 D SPL     : ==== Wait For Request ======
+06-30 17:20:18.844  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:18.844  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:18.844  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 2 to 0
+06-30 17:20:18.938 27590 27590 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+06-30 17:20:18.938 27590 27590 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+06-30 17:20:18.957 27590 27590 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+06-30 17:20:18.957 27590 27590 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+06-30 17:20:18.961 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:18.966  2345  4667 W TelephonyPermissions: reportAccessDeniedToReadIdentifiers:com.solflare.mobile:getSerial:-1
+06-30 17:20:18.998 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.011  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.050 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.061  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.064  3132  3495 I BtGatt.ScanManager: msg.what = 6
+06-30 17:20:19.064  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 1
+06-30 17:20:19.064  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 3
+06-30 17:20:19.069 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.076 23310 23310 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.safebrowsing.SafeBrowsingService.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+06-30 17:20:19.086  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.101 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.102  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.107  7296  8058 V MobileWalletAdapterWebSocket: MobileWalletAdapterWebSocket-ctor
+06-30 17:20:19.107  7296  8058 V MobileWalletAdapterWebSocket: connect
+06-30 17:20:19.108 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket: WebSockets error
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket: com.neovisionaries.ws.client.WebSocketException: Failed to connect to '127.0.0.1:51852': failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37328) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connectSocket(SocketConnector.java:126)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.doConnect(SocketConnector.java:238)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketConnector.connect(SocketConnector.java:189)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocket.connect(WebSocket.java:2351)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.ConnectThread.runMain(ConnectThread.java:32)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.WebSocketThread.run(WebSocketThread.java:45)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket: Caused by: java.net.ConnectException: failed to connect to /127.0.0.1 (port 51852) from /127.0.0.1 (port 37328) after 200ms: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:347)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connectErrno(IoBridge.java:237)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.connect(IoBridge.java:179)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at java.net.PlainSocketImpl.socketConnect(PlainSocketImpl.java:142)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.doConnect(AbstractPlainSocketImpl.java:390)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connectToAddress(AbstractPlainSocketImpl.java:230)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at java.net.AbstractPlainSocketImpl.connect(AbstractPlainSocketImpl.java:212)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at java.net.SocksSocketImpl.connect(SocksSocketImpl.java:436)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at java.net.Socket.connect(Socket.java:646)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at com.neovisionaries.ws.client.SocketInitiator$SocketRacer.run(SocketInitiator.java:126)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket: Caused by: android.system.ErrnoException: isConnected failed: ECONNREFUSED (Connection refused)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  at libcore.io.IoBridge.isConnected(IoBridge.java:334)
+06-30 17:20:19.114  7296  8216 W MobileWalletAdapterWebSocket:  ... 9 more
+06-30 17:20:19.114  7296  8216 D LocalAssociationScenario: Connect attempt failed, retrying in 750 ms
+06-30 17:20:19.125 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.127  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.136  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.141 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.156 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:19.161  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.169  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:19.196 27590 27590 I c       : Starting local mobile-wallet-adapter WebSocket server on port 51852
+06-30 17:20:19.286 27590 27590 I flutter : Cached video of [] is: null
+06-30 17:20:19.286 27590 27590 I ExoPlayerImpl: Init e6d8c35 [AndroidXMedia3/1.4.1] [ingot, Saga, Solana Mobile, 34]
+06-30 17:20:19.289 27590  8254 I Surface : Surface::setFrameRate is deprecated, setFrameRate hint is dropped as destination is not SurfaceFlinger
+06-30 17:20:19.864  7296  8058 V MobileWalletAdapterWebSocket: MobileWalletAdapterWebSocket-ctor
+06-30 17:20:19.865  7296  8058 V MobileWalletAdapterWebSocket: connect
+06-30 17:20:19.871 27590  8239 D c       : mobile-wallet-adapter WebSocket opened
+06-30 17:20:19.871 27590  8239 V u       : receiverConnected
+06-30 17:20:19.872  7296  8263 V MobileWalletAdapterWebSocket: onConnected
+06-30 17:20:19.872  7296  8263 V LocalAssociationScenario: WebSocket connection established, waiting for session establishment
+06-30 17:20:19.872  7296  8263 V MobileWalletAdapterSessionCommon: receiverConnected
+06-30 17:20:19.872  7296  8263 V MobileWalletAdapterSessionCommon: generateSessionECDHKeyPair
+06-30 17:20:19.873  7296  8263 V MobileWalletAdapterWebSocket: send
+06-30 17:20:19.874 27590  8239 D c       : mobile-wallet-adapter WebSocket recv (binary)
+06-30 17:20:19.874 27590  8239 V u       : receiverMessageReceived: size=129
+06-30 17:20:19.874 27590  8239 V u       : handleSessionEstablishmentMessage
+06-30 17:20:19.874 27590  8239 V u       : Received public key 101279078280182301491163901716496717628824517018214975771686255842515136359904/61543744345549677265099387041171070341727062288704658171468606566583925632088
+06-30 17:20:19.874 27590  8239 V u       : generateSessionECDHKeyPair
+06-30 17:20:19.874 27590  8239 V u       : generateSessionECDHSecret
+06-30 17:20:19.875 27590  8239 I u       : Encrypted session established
+06-30 17:20:19.875 27590  8239 V i       : JSON-RPC 2.0 server connected
+06-30 17:20:19.875 27590  8239 D m       : MobileWalletAdapter session established
+06-30 17:20:19.875 27590  8236 V e       : Starting AuthRepository
+06-30 17:20:19.875 27590  8239 D c       : mobile-wallet-adapter WebSocket send
+06-30 17:20:19.875  7296  8262 V MobileWalletAdapterWebSocket: onBinaryMessage
+06-30 17:20:19.875  7296  8262 V MobileWalletAdapterSessionCommon: receiverMessageReceived: size=106
+06-30 17:20:19.875  7296  8262 V MobileWalletAdapterSession: handleSessionEstablishmentMessage
+06-30 17:20:19.876  7296  8262 V MobileWalletAdapterSession: Received public key 49057459128709795667998462954315731489466392116491961861530509002296971424490/9713839701504029878582695889861213439306122083290874237464805083420980565867
+06-30 17:20:19.876  7296  8262 V MobileWalletAdapterSessionCommon: generateSessionECDHSecret
+06-30 17:20:19.876  7296  8262 I MobileWalletAdapterSessionCommon: Encrypted session established
+06-30 17:20:19.876  7296  8262 V JsonRpc20Client: JSON-RPC 2.0 client connected
+06-30 17:20:19.877  7296  8262 V MobileWalletAdapterSession: Received session properties: version = 1
+06-30 17:20:19.877  7296  8262 D LocalAssociationScenario: Session established, scenario ready for use
+06-30 17:20:19.878  7296  7752 V MobileWalletAdapterSessionCommon: send
+06-30 17:20:19.878  7296  7752 V MobileWalletAdapterWebSocket: send
+06-30 17:20:19.880 27590  8239 D c       : mobile-wallet-adapter WebSocket recv (binary)
+06-30 17:20:19.880 27590  8239 V u       : receiverMessageReceived: size=233
+06-30 17:20:19.880 27590  8239 V u       : handleEncryptedSessionMessage
+06-30 17:20:19.880 27590  8239 V i       : JSON-RPC 2.0 message received
+06-30 17:20:20.132 27590  8236 D m       : Authorize request completed successfully; issued auth: AuthRecord{id=44, identity=IdentityRecord{id=9, name='Dioxus Demo App', uri=https://pub-1ec9c4f3ba9448c6a82b677a2bc8d950.r2.dev, relativeIconUri=favicon.ico}, accounts=[AccountRecord{label=7ZeWUgFtkq, publicKey=[97, -125, 30, 62, 47, -28, -81, 38, 40, -123, -97, 38, 47, -26, -120, 8, -23, -9, 2, -63, 121, -92, -76, 18, 4, -58, -50, -114, -101, 17, -52, 30]}], chain='solana:devnet', scope=[97, 112, 112], walletUriBase='null', issued=1751329220131, expires=1751332820131, mRevoked=false}
+06-30 17:20:20.145   922   922 E KeymasterUtils: rsp_header->status: -28
+06-30 17:20:20.145   922   922 E KeyMasterHalDevice: abort_operation
+06-30 17:20:20.145   922   922 E KeyMasterHalDevice: ret: -28
+06-30 17:20:20.145 27590  8236 V e       : Returning auth token for AuthRecord: AuthRecord{id=44, identity=IdentityRecord{id=9, name='Dioxus Demo App', uri=https://pub-1ec9c4f3ba9448c6a82b677a2bc8d950.r2.dev, relativeIconUri=favicon.ico}, accounts=[AccountRecord{label=7ZeWUgFtkq, publicKey=[97, -125, 30, 62, 47, -28, -81, 38, 40, -123, -97, 38, 47, -26, -120, 8, -23, -9, 2, -63, 121, -92, -76, 18, 4, -58, -50, -114, -101, 17, -52, 30]}], chain='solana:devnet', scope=[97, 112, 112], walletUriBase='null', issued=1751329220131, expires=1751332820131, mRevoked=false}
+06-30 17:20:20.145 27590  8236 D i       : Responding with result for id=1
+06-30 17:20:20.147 27590  8236 V u       : send
+06-30 17:20:20.147 27590  8236 D c       : mobile-wallet-adapter WebSocket send
+06-30 17:20:20.148  7296  8262 V MobileWalletAdapterWebSocket: onBinaryMessage
+06-30 17:20:20.148  7296  8262 V MobileWalletAdapterSessionCommon: receiverMessageReceived: size=32878
+06-30 17:20:20.148  7296  8262 V MobileWalletAdapterSessionCommon: handleEncryptedSessionMessage
+06-30 17:20:20.148  7296  8262 V JsonRpc20Client: JSON-RPC 2.0 message received
+06-30 17:20:20.150  7296  7752 I DioxusMWA: MWA Transaction/Authorization Success!
+06-30 17:20:20.150  7296  7752 I DioxusMWA:   AuthToken: eyJ0eXAiOiJzb2xmbGFyZS1hdXRoLXRva2VuIiwiaWlkIjoiOSIsInRpZCI6IjQ0In0gzre4EaJWjltS1INvRozG/4GkxJngpkO4HF5Eh8onwQ
+06-30 17:20:20.150  7296  7752 I DioxusMWA: Sending public key to Rust: YYMePi/kryYohZ8mL+aICOn3AsF5pLQSBMbOjpsRzB4=
+06-30 17:20:20.150  7296  7752 I mobile::ffi: Received public key from Kotlin, sending to channel: YYMePi/kryYohZ8mL+aICOn3AsF5pLQSBMbOjpsRzB4=
+06-30 17:20:20.150  7296  7752 E mobile  : Failed to send public key through channel: sending on a closed channel
+06-30 17:20:20.150  7296  7752 I DioxusMWA:   Account[0]:
+06-30 17:20:20.150  7296  7752 I DioxusMWA:     PublicKey (Base64): YYMePi/kryYohZ8mL+aICOn3AsF5pLQSBMbOjpsRzB4=
+06-30 17:20:20.150  7296  7752 I DioxusMWA:     Account Label: 7ZeWUgFtkq
+06-30 17:20:20.151  7296  7752 V MobileWalletAdapterWebSocket: close
+06-30 17:20:20.151  7296  7752 V MobileWalletAdapterWebSocket: closing
+06-30 17:20:20.152 27590  8237 D c       : mobile-wallet-adapter WebSocket closed
+06-30 17:20:20.152 27590  8237 V u       : receiverDisconnected
+06-30 17:20:20.152 27590  8237 V i       : JSON-RPC 2.0 server disconnected
+06-30 17:20:20.152 27590  8237 I u       : mobile-wallet-adapter session closed
+06-30 17:20:20.152 27590  8237 D m       : MobileWalletAdapter session terminated
+06-30 17:20:20.152 27590  8236 V e       : Stopping AuthRepository
+06-30 17:20:20.153 27590  8236 I c       : Stopping local mobile-wallet-adapter WebSocket server
+06-30 17:20:20.155  7296  8262 V MobileWalletAdapterWebSocket: onDisconnected
+06-30 17:20:20.155  7296  8262 V MobileWalletAdapterSessionCommon: receiverDisconnected
+06-30 17:20:20.155  7296  8262 V JsonRpc20Client: JSON-RPC 2.0 client disconnected
+06-30 17:20:20.155  7296  8262 I MobileWalletAdapterSessionCommon: mobile-wallet-adapter session closed
+06-30 17:20:20.155  7296  8262 D LocalAssociationScenario: Disconnected during normal operation
+06-30 17:20:20.155  7296  7752 I DioxusMWA: MWA transact operation completed successfully.
+06-30 17:20:20.164 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.172 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.174  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.177  2345  2452 D ActivityTrigger: ActivityTrigger activityPauseTrigger
+06-30 17:20:20.177  2967  3007 V WindowManagerShell: Transition requested: android.os.BinderProxy@c40579c TransitionRequestInfo { type = CLOSE, triggerTask = null, remoteTransition = null, displayChange = null }
+06-30 17:20:20.182 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.182  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.186 27590 27794 D SessionLifecycleClient: Sending lifecycle 2 to service
+06-30 17:20:20.186 27590 27802 D SessionLifecycleService: Activity backgrounding at 306678335
+06-30 17:20:20.191  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.192  1313  7439 D StNfcHal: (#02595) Rx 6f 02 0f 21 20 00 a2 0a 08 06 00 03 03 e1 c5 ff 0a e8
+06-30 17:20:20.198  2967  2967 D StatusBarIconController: ignoring old pipeline callback because the new wifi icon is enabled
+06-30 17:20:20.199 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.199  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.200  1466  1466 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+06-30 17:20:20.200  1313  7439 D StNfcHal: (#02596) Rx 6f 02 1c 21 20 00 a2 0a 09 07 00 03 03 e0 c5 ff 10 bf 15 05 03 c5 ff 10 c7 12 04 c5 ff 11 8a
+06-30 17:20:20.203  7296  7355 E OpenGLRenderer: Unable to match the desired swap behavior.
+06-30 17:20:20.208  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.208 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.212  1313  7439 D StNfcHal: (#02597) Rx 6f 02 0d 21 20 00 0a 08 01 00 01 52 c5 ff 1d 0c
+06-30 17:20:20.215 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.215  2967  3007 V WindowManagerShell: onTransitionReady android.os.BinderProxy@c40579c: {id=501 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=CLOSE f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0xbf05a5 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{null m=TO_FRONT f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0x7abdd7a sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:20.215  2967  3007 V WindowManagerShell: Playing animation for (#501)android.os.BinderProxy@c40579c@0
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.transition.DefaultMixedHandler@311586f
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.keyguard.KeyguardTransitionHandler@4becb6d
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.activityembedding.ActivityEmbeddingController@a8603a2
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.recents.RecentsTransitionHandler@1771833
+06-30 17:20:20.216  2967  3007 V ShellRecents: RecentsTransitionHandler.startAnimation: no controller found
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.pip.PipTransition@38707f0
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.splitscreen.StageCoordinator@889b169
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.transition.RemoteTransitionHandler@6e4b7ee
+06-30 17:20:20.216  2967  3007 V WindowManagerShell: Transition doesn't have explicit remote, search filters for match for {id=501 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=CLOSE f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0xbf05a5 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{null m=TO_FRONT f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0x7abdd7a sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x100 checks=[{atype=home independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=false order=TOP topActivity=ComponentInfo{com.android.launcher3/com.android.searchlauncher.SearchLauncher}},{atype=standard independent=true modes=[CLOSE,TO_BACK] flags=NONE mustBeTask=false order=ANY topActivity=null}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@f81048f, appThread = android.app.IApplicationThread$Stub$Proxy@eecb31c, debugName = QuickstepLaunchHome }}
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  Delegate animation for #501 to null
+06-30 17:20:20.216  2967  3007 V WindowManagerShell:  try handler com.android.wm.shell.transition.DefaultTransitionHandler@d02fb25
+06-30 17:20:20.216  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.216  2967  3007 V WindowManagerShell: start default transition animation, info = {id=501 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=CLOSE f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0xbf05a5 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{null m=TO_FRONT f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0x7abdd7a sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:20.216  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.218  2345  2496 V WindowManager: Sent Transition #501 createdAt=06-30 17:20:20.176 via request=TransitionRequestInfo { type = CLOSE, triggerTask = null, remoteTransition = null, displayChange = null }
+06-30 17:20:20.219  2345  2496 V WindowManager:     startWCT=WindowContainerTransaction { changes = {} hops = [] errorCallbackToken=null taskFragmentOrganizer=null }
+06-30 17:20:20.219  2967  3007 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@ebf5721 animAttr=0x6 type=CLOSE isEntrance=true
+06-30 17:20:20.219  2345  2496 V WindowManager:     info={id=501 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{null m=CLOSE f=FILLS_TASK leash=Surface(name=ActivityRecord{271a91e u0 com.solflare.mobile/.MainActivity)/@0x57c40da sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{null m=TO_FRONT f=FILLS_TASK leash=Surface(name=ActivityRecord{614c6ff u0 com.example.Mobile/dev.dioxus.main.MainActivity)/@0xa331bd sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+06-30 17:20:20.222  1313  7439 D StNfcHal: (#02598) Rx 6f 02 0f 21 20 00 0a 0a 07 00 03 05 00 08 c5 ff 22 7c
+06-30 17:20:20.224  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.224  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.224  2967  3007 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@365fe34 animAttr=0x7 type=CLOSE isEntrance=false
+06-30 17:20:20.231 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.232  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.240 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.241  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.241  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.249  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.251  1313  7439 D StNfcHal: (#02599) Rx 6f 02 10 21 20 00 0a 0b 19 00 05 00 ff 00 03 c5 ff 40 06
+06-30 17:20:20.257 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.264 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.264  1313  7439 D StNfcHal: (#0259A) Rx 6f 02 0f 21 20 00 0a 0a 0a 00 03 26 01 00 c5 ff 4b 92
+06-30 17:20:20.266  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.267  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.267  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.271  2345  4667 I ImeTracker: com.example.Mobile:63313614: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+06-30 17:20:20.271  2345  4667 I ImeTracker: com.example.Mobile:63313614: onCancelled at PHASE_SERVER_SHOULD_HIDE
+06-30 17:20:20.273 24309 24309 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():1984
+06-30 17:20:20.274  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.275 24309 24309 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 0, locked = false
+06-30 17:20:20.276 24309 24309 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1248 onStartInput(EditorInfo{EditorInfo{packageName=com.example.Mobile, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=12000000, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+06-30 17:20:20.277  1313  7439 D StNfcHal: (#0259B) Rx 6f 02 09 21 20 00 13 04 c5 ff 4d d0
+06-30 17:20:20.277 24309 24309 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 1, locked = false
+06-30 17:20:20.278  2345  3653 W PackageConfigPersister: App-specific configuration not found for packageName: com.example.Mobile and userId: 0
+06-30 17:20:20.281 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.283  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.288  2967  3007 V WindowManagerShell:  animated by com.android.wm.shell.transition.DefaultTransitionHandler@d02fb25
+06-30 17:20:20.291  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.291  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.291  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.299  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.299 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.307  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.311 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.323 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.324  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.324  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.331 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.332  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.332  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.340  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.340 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.349  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.349  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.350 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.357  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.360 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.365  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.365  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.367 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.373  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.375 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.382  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.385 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.390  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.397 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.398  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.398  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.407  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.408 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.415  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.415  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.416 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.423  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.424 27590 27745 E FrameEvents: updateAcquireFence: Did not find frame.
+06-30 17:20:20.432  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.432  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.457  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.465  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.490  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.498  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.523  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.531  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.556  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.565  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.589  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.598  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.623  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.631  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.656  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.664  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.689  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.702  1313  7439 D StNfcHal: (#0259C) Rx 6f 02 09 21 20 00 12 04 c6 00 c2 fd
+06-30 17:20:20.706  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.715  1313  7439 D StNfcHal: (#0259D) Rx 6f 02 0d 21 20 00 0a 08 01 00 01 52 c6 00 ce 7f
+06-30 17:20:20.722  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.725  1313  7439 D StNfcHal: (#0259E) Rx 6f 02 0f 21 20 00 0a 0a 07 00 03 05 00 08 c6 00 d3 f0
+06-30 17:20:20.739  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.753  2967  3007 V WindowManagerShell: Transition animation finished (aborted=false), notifying core (#501)android.os.BinderProxy@c40579c@0
+06-30 17:20:20.756  2345  2496 V WindowManager: Finish Transition #501: created at 06-30 17:20:20.176 collect-started=0.061ms request-sent=0.102ms started=6.476ms ready=16.433ms sent=35.45ms finished=579.107ms
+06-30 17:20:20.757  1313  7439 D StNfcHal: (#0259F) Rx 6f 02 10 21 20 00 0a 0b 19 00 05 00 ff 00 03 c6 00 f1 7a
+06-30 17:20:20.759  2967  3007 V WindowManagerShell: Track 0 became idle
+06-30 17:20:20.759  2967  3007 V WindowManagerShell: All active transition animations finished
+06-30 17:20:20.761  3144  3214 I DynamicDDSService: handleMessage(ACTIVITY_SUSPEND{appInfo=com.solflare.mobile isFullScreen=}true)
+06-30 17:20:20.761  3144  3214 W DynamicDDSService: mAppNames is empty, no need to send QMI
+06-30 17:20:20.765  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.769  1313  7439 D StNfcHal: (#025A0) Rx 6f 02 0f 21 20 00 0a 0a 0a 00 03 26 01 00 c6 00 fd 06
+06-30 17:20:20.773  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.773  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.780  1313  7439 D StNfcHal: (#025A1) Rx 6f 02 09 21 20 00 13 04 c6 00 ff 44
+06-30 17:20:20.797  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.805  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.831  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.839  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.864  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.872  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.897  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.905  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.930  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.938  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.963  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.971  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:20.974  3132  3495 I BtGatt.ScanManager: msg.what = 6
+06-30 17:20:20.975  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 1
+06-30 17:20:20.975  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 3
+06-30 17:20:20.994 27590 27590 I ExoPlayerImpl: Release e6d8c35 [AndroidXMedia3/1.4.1] [ingot, Saga, Solana Mobile, 34] [media3.common, media3.exoplayer, media3.decoder, media3.datasource]
+06-30 17:20:20.996  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.015 27590 27590 I ExoPlayerImpl: Release e6d8c35 [AndroidXMedia3/1.4.1] [ingot, Saga, Solana Mobile, 34] [media3.common, media3.exoplayer, media3.decoder, media3.datasource]
+06-30 17:20:21.057 27590 27590 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@d629d68
+06-30 17:20:21.057  2345  3653 D CoreBackPreview: Window{fbbdf6 u0 com.solflare.mobile/com.solflare.mobile.MainActivity}: Setting back callback null
+06-30 17:20:21.058  2345  3653 W InputManager-JNI: Input channel object 'fbbdf6 com.solflare.mobile/com.solflare.mobile.MainActivity (client)' was disposed without first being removed with the input manager!
+06-30 17:20:21.063  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.063 27590 27590 I Choreographer: Skipped 35 frames!  The application may be doing too much work on its main thread.
+06-30 17:20:21.063  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.163  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:21.163  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:21.164  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 0 to 2
+06-30 17:20:21.207  1313  7439 D StNfcHal: (#025A2) Rx 6f 02 09 21 20 00 12 04 c6 02 74 7f
+06-30 17:20:21.208  1393  4410 E ANDR-PERF-LM: VmRssMeter:: start() 358: Could not find pid, can not collect vmrss data
+06-30 17:20:21.208  1393  4411 E ANDR-PERF-LM: VmRssMeter:: start() 358: Could not find pid, can not collect vmrss data
+06-30 17:20:21.208  1393  4411 E ANDR-PERF-LM: AdaptiveLaunch: writeToDataBase() 64: Meter aborted or could not get meter data for this run
+06-30 17:20:21.220  1313  7439 D StNfcHal: (#025A3) Rx 6f 02 0d 21 20 00 0a 08 01 00 01 52 c6 02 80 01
+06-30 17:20:21.230  1313  7439 D StNfcHal: (#025A4) Rx 6f 02 0f 21 20 00 0a 0a 07 00 03 05 00 08 c6 02 85 71
+06-30 17:20:21.261  1313  7439 D StNfcHal: (#025A5) Rx 6f 02 10 21 20 00 0a 0b 19 00 05 00 ff 00 03 c6 02 a2 fb
+06-30 17:20:21.274  1313  7439 D StNfcHal: (#025A6) Rx 6f 02 0f 21 20 00 0a 0a 0a 00 03 26 01 00 c6 02 ae 87
+06-30 17:20:21.284  1313  7439 D StNfcHal: (#025A7) Rx 6f 02 09 21 20 00 13 04 c6 02 b0 c5
+06-30 17:20:21.520  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.522  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:21.522  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:21.522  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 2 to 0
+06-30 17:20:21.552  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.582  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.594  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.602  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.610  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.619  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.627  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.635  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.660  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.668  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.693  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.702  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.712  1313  7439 D StNfcHal: (#025A8) Rx 6f 02 09 21 20 00 12 04 c6 04 25 ef
+06-30 17:20:21.725  1313  7439 D StNfcHal: (#025A9) Rx 6f 02 0d 21 20 00 0a 08 01 00 01 52 c6 04 31 71
+06-30 17:20:21.727  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.735  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.735  1313  7439 D StNfcHal: (#025AA) Rx 6f 02 0f 21 20 00 0a 0a 07 00 03 05 00 08 c6 04 36 e1
+06-30 17:20:21.760  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.766  1313  7439 D StNfcHal: (#025AB) Rx 6f 02 10 21 20 00 0a 0b 19 00 05 00 ff 00 03 c6 04 54 6b
+06-30 17:20:21.768  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.779  1313  7439 D StNfcHal: (#025AC) Rx 6f 02 0f 21 20 00 0a 0a 0a 00 03 26 01 00 c6 04 5f f7
+06-30 17:20:21.789  1313  7439 D StNfcHal: (#025AD) Rx 6f 02 09 21 20 00 13 04 c6 04 62 2e
+06-30 17:20:21.793  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.810  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.818  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.826  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.835  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.843  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.852  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.860  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.868  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.876  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.885  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.893  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.901  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.910  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.918  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.926  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.934  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.943  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.951  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.959  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.968  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.976  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.984  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:21.993  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.001  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.009  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.018  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.026  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.034  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.042  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.051  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.059  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.067  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.084  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.109  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.117  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.142  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.150  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.175  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.183  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.209  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.216  1313  7439 D StNfcHal: (#025AE) Rx 6f 02 09 21 20 00 12 04 c6 05 d7 49
+06-30 17:20:22.217  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.230  1313  7439 D StNfcHal: (#025AF) Rx 6f 02 0d 21 20 00 0a 08 01 00 01 52 c6 05 e2 cb
+06-30 17:20:22.240  1313  7439 D StNfcHal: (#025B0) Rx 6f 02 0f 21 20 00 0a 0a 07 00 03 05 00 08 c6 05 e8 3b
+06-30 17:20:22.242  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.250  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.270  1313  7439 D StNfcHal: (#025B1) Rx 6f 02 10 21 20 00 0a 0b 19 00 05 00 ff 00 03 c6 06 05 c6
+06-30 17:20:22.275  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.283  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.284  1313  7439 D StNfcHal: (#025B2) Rx 6f 02 0f 21 20 00 0a 0a 0a 00 03 26 01 00 c6 06 11 52
+06-30 17:20:22.294  1313  7439 D StNfcHal: (#025B3) Rx 6f 02 09 21 20 00 13 04 c6 06 13 90
+06-30 17:20:22.299 23294  7325 I NearbyMediums: Found Fast Ble Advertisements :
+06-30 17:20:22.299 23294  7325 I NearbyMediums: BleAdvertisement { version=2, socketVersion=2, isFast=true, serviceIdHash=null, data=[ 0x23 0x52 0x37 0x53 0x37 0x11 0x32 0xd8 0xa3 0x5d 0xb3 0x96 0x24 0x8e 0xe4 0x47 0x4d 0xaa 0x22 0x9b 0xf9 0x5f 0x7b ], deviceToken=[ 0xfd 0x4d ], rxAdvertisement=null } : 3 times.
+06-30 17:20:22.299 23294  7325 I NearbyMediums: Total 3 fast advertisements from 1 unique advertisers.
+06-30 17:20:22.308  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.325  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.341  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.366  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.375  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.400  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.408  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.433  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.441  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.466  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.474  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.499  1466  1466 W Layer   : gatherBufferInfo: Received unknown dataspace from gralloc
+06-30 17:20:22.575  1367  1729 W SDM     : HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 745940000
+06-30 17:20:22.575  1367  1729 I SDM     : HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1080x2400-1 for Peripheral
+06-30 17:20:22.575  1367  1729 I SDM     : HWCDisplay::SubmitDisplayConfig: Active configuration changed from config 0 to 2
+06-30 17:20:22.720  1313  7439 D StNfcHal: (#025B4) Rx 6f 02 0a 21 20 00 1b 05 00 c6 07 87 ea
+06-30 17:20:22.731  1313  7439 D StNfcHal: (#025B5) Rx 6f 02 3a 21 20 00 a2 0a 01 01 00 11 00 17 c6 07 88 fa a2 0a 02 03 03 fa 03 ee c6 07 8f a6 14 05
+06-30 17:20:22.731  1313  7439 D StNfcHal: (#025B5) rx 01 c6 07 8f a9 a2 0a 06 03 03 ea 03 de c6 07 8f ad a2 0a 07 03 00 0a 03 fe c6 07 8f af
+06-30 17:20:23.068  1265  3673 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+06-30 17:20:23.068  1265  3673 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK ON
+06-30 17:20:23.069  1265  3673 D vendor.qti.bluetooth@1.0-wake_lock: Acquire wakelock is acquired
+06-30 17:20:23.069  1265  3673 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Writing IBS_WAKE_ACK
+06-30 17:20:23.070  3132  3675 I bt_stack: [INFO:btm_ble_gap.cc(3297)] btm_ble_process_adv_pkt_cont Data Complete 25:8a:76:e3:d0:d1
+06-30 17:20:23.070  3132  3675 D bt_btm_ble: bool parse_adv_audio_uuids_from_adv_pkt(const uint8_t *, size_t, uint8_t): tmap_cap_pts: false
+06-30 17:20:23.071  3132  3497 D BluetoothAdapterService: getIdentityAddress null retruning 25:8A:76:E3:D0:D1
+06-30 17:20:23.110  1265  3673 I vendor.qti.bluetooth@1.0-ibs_handler: ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+06-30 17:20:23.110  1265  3673 D vendor.qti.bluetooth@1.0-ibs_handler: SerialClockVote: vote for UART CLK OFF
+06-30 17:20:23.206  3132  3495 I BtGatt.ScanManager: msg.what = 6
+06-30 17:20:23.206  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 1
+06-30 17:20:23.206  3132  3495 D BtGatt.ScanManager: uid 10109 isForeground true scanMode 3
+06-30 17:20:23.262  1265  3502 D vendor.qti.bluetooth@1.0-wake_lock: Release wakelock is released

@@ -5,8 +5,6 @@ use jni::{
 };
 use once_cell::sync::OnceCell;
 
-use crate::PUBLIC_KEY;
-
 /// Global, immutable JavaVM pointer – initialised in `JNI_OnLoad`.
 static JVM: OnceCell<JavaVM> = OnceCell::new();
 /// Global, immutable WryActivity jobject – initialised in `Java_dev_dioxus_main_WryActivity_create`.
@@ -67,18 +65,17 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendPublicKey(
         Ok(s) => s.into(),
         Err(e) => {
             log::error!("Failed to get public key string from JNI: {:?}", e);
-            // In case of an error, we do not update the public key.
             return;
         }
     };
+
+    // Send the received public key to the channel in main.rs.
+    // This decouples the FFI layer from the application state.
     log::info!(
-        "Received public key from Kotlin, storing in global state: {}",
+        "Received public key from Kotlin, sending to channel: {}",
         pub_key_str
     );
-
-    PUBLIC_KEY.with_mut(|slot| {
-        *slot = Some(pub_key_str.clone());
-    });
+    crate::send_public_key_from_ffi(pub_key_str);
 }
 
 #[no_mangle]
