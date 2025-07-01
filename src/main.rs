@@ -1,8 +1,11 @@
 pub mod ffi;
 
+use std::str::FromStr;
+
 use async_channel::{unbounded, Receiver, Sender};
 use dioxus::prelude::*;
 use once_cell::sync::OnceCell;
+use solana_sdk::pubkey::Pubkey;
 
 // --- IPC Channel Setup ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -44,7 +47,7 @@ const HEADER_SVG: Asset = asset!("/assets/header.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 #[derive(Debug, Clone)]
-pub struct WalletState(String);
+pub struct WalletState(Pubkey);
 
 fn main() {
     android_logger::init_once(
@@ -56,14 +59,16 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let mut wallet_state = use_signal(|| WalletState("no pubkey yet".into()));
+    let mut wallet_state = use_signal(|| WalletState(Pubkey::default()));
     use_context_provider(|| wallet_state);
     use_future(move || async move {
         if let Some(rx) = RX.get().cloned() {
             while let Ok(msg) = rx.recv().await {
                 match msg {
                     MsgFromKotlin::Pubkey(string) => {
-                        wallet_state.set(WalletState(string));
+                        if let Ok(pubkey) = Pubkey::from_str(string.as_str()) {
+                            wallet_state.set(WalletState(pubkey));
+                        }
                     }
                 }
             }
