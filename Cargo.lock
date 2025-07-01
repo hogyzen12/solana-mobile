@@ -2545,10 +2545,12 @@ version = "0.1.0"
 dependencies = [
  "android_logger",
  "async-channel",
+ "base64",
  "dioxus",
  "jni",
  "log",
  "once_cell",
+ "serde",
 ]
 
 [[package]]

@@ -5,6 +5,8 @@ use jni::{
 };
 use once_cell::sync::OnceCell;
 
+use crate::MsgFromKotlin;
+
 /// Global, immutable JavaVM pointer – initialised in `JNI_OnLoad`.
 static JVM: OnceCell<JavaVM> = OnceCell::new();
 /// Global, immutable WryActivity jobject – initialised in `Java_dev_dioxus_main_WryActivity_create`.
@@ -75,7 +77,8 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendPublicKey(
         "Received public key from Kotlin, sending to channel: {}",
         pub_key_str
     );
-    crate::send_public_key_from_ffi(pub_key_str);
+    let msg = MsgFromKotlin::Pubkey(pub_key_str);
+    crate::send_msg_from_ffi(msg);
 }
 
 #[no_mangle]

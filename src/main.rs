@@ -5,27 +5,29 @@ use dioxus::prelude::*;
 use once_cell::sync::OnceCell;
 
 // --- IPC Channel Setup ---
-static TX: OnceCell<Sender<String>> = OnceCell::new();
-static RX: OnceCell<Receiver<String>> = OnceCell::new();
+#[derive(serde::Serialize, serde::Deserialize)]
+pub enum MsgFromKotlin {
+    Pubkey(String),
+}
+static TX: OnceCell<Sender<MsgFromKotlin>> = OnceCell::new();
+static RX: OnceCell<Receiver<MsgFromKotlin>> = OnceCell::new();
 
-/// Initialise once – typically at the very top of `main`
+/// Initialize channels
 fn init_ipc_channel() {
-    let (tx, rx) = unbounded::<String>();
-    TX.set(tx).unwrap();
-    RX.set(rx).unwrap();
+    let (tx, rx) = unbounded::<MsgFromKotlin>();
+    TX.set(tx).expect("initialization of ffi sender just once.");
+    RX.set(rx)
+        .expect("initialization of ffi receiver just once.");
 }
 
-// 2. A public function for the FFI layer to send messages.
-// This function uses `get_or_init` to safely initialize the channel and receiver thread exactly once.
-pub fn send_public_key_from_ffi(pk: String) {
+/// Send thru channel from kotlin to rust
+pub fn send_msg_from_ffi(msg: MsgFromKotlin) {
     if let Some(tx) = TX.get() {
-        // non‑blocking; if the buffer is full the value is dropped/logged
-        let _ = tx.try_send(pk);
+        let _ = tx.try_send(msg);
     }
 }
 
 // --- Dioxus App Setup ---
-
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
 enum Route {
@@ -45,8 +47,6 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 pub struct WalletState(String);
 
 fn main() {
-    // Set up our logger before launching the app.
-    // The IPC channel is now initialized on demand.
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
     );
@@ -60,8 +60,12 @@ fn App() -> Element {
     use_context_provider(|| wallet_state);
     use_future(move || async move {
         if let Some(rx) = RX.get().cloned() {
-            while let Ok(pk) = rx.recv().await {
-                wallet_state.set(WalletState(pk));
+            while let Ok(msg) = rx.recv().await {
+                match msg {
+                    MsgFromKotlin::Pubkey(string) => {
+                        wallet_state.set(WalletState(string));
+                    }
+                }
             }
         }
     });
