@@ -1,44 +1,26 @@
 pub mod ffi;
 
+use async_channel::{unbounded, Receiver, Sender};
 use dioxus::prelude::*;
 use once_cell::sync::OnceCell;
-use std::sync::mpsc::{self, Sender};
 
 // --- IPC Channel Setup ---
+static TX: OnceCell<Sender<String>> = OnceCell::new();
+static RX: OnceCell<Receiver<String>> = OnceCell::new();
 
-// 1. A static OnceCell to hold the sender part of our channel.
-static IPC_SENDER: OnceCell<Sender<String>> = OnceCell::new();
+/// Initialise once – typically at the very top of `main`
+fn init_ipc_channel() {
+    let (tx, rx) = unbounded::<String>();
+    TX.set(tx).unwrap();
+    RX.set(rx).unwrap();
+}
 
 // 2. A public function for the FFI layer to send messages.
 // This function uses `get_or_init` to safely initialize the channel and receiver thread exactly once.
 pub fn send_public_key_from_ffi(pk: String) {
-    let sender = IPC_SENDER.get_or_init(|| {
-        log::info!("Initializing IPC channel and spawning receiver thread.");
-        let (tx, rx) = mpsc::channel::<String>();
-
-        // Spawn a dedicated thread to listen for messages.
-        spawn(async move {
-            let mut wallet_state: Signal<WalletState> = use_context();
-            // Loop forever, waiting for messages on the receiver.
-            // This loop will only end if the sender is dropped, which should only happen
-            // when the application is shutting down.
-            for received_pk in rx {
-                log::info!("Receiver thread got public key: {}", received_pk);
-                // Update the global signal. This will trigger UI updates.
-                *wallet_state.write() = WalletState(received_pk);
-            }
-            log::warn!(
-                "IPC receiver thread shutting down. This should not happen in normal operation."
-            );
-        });
-
-        // The closure returns the sender, which is then stored in the OnceCell.
-        tx
-    });
-
-    // Now that we have a sender, try to send the public key.
-    if let Err(e) = sender.send(pk) {
-        log::error!("Failed to send public key through channel: {}", e);
+    if let Some(tx) = TX.get() {
+        // non‑blocking; if the buffer is full the value is dropped/logged
+        let _ = tx.try_send(pk);
     }
 }
 
@@ -68,13 +50,26 @@ fn main() {
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
     );
+    init_ipc_channel();
     dioxus::launch(App);
 }
 
 #[component]
 fn App() -> Element {
-    let wallet_state = use_signal(|| WalletState("no pubkey yet".to_string()));
+    let wallet_state = use_signal(|| WalletState("no pubkey yet".into()));
     use_context_provider(|| wallet_state);
+    let _cor: Coroutine<()> = use_coroutine(move |mut _scope| {
+        // clone handles that are !Send: we are still on UI thread here
+        let mut wallet_state = wallet_state.clone();
+        let rx = RX.get().expect("channel not initialised").clone();
+
+        async move {
+            while let Ok(pk) = rx.recv().await {
+                wallet_state.set(WalletState(pk)); // safe ‑ still UI thread
+            }
+        }
+    });
+
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
