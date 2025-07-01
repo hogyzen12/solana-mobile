@@ -56,16 +56,12 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let wallet_state = use_signal(|| WalletState("no pubkey yet".into()));
+    let mut wallet_state = use_signal(|| WalletState("no pubkey yet".into()));
     use_context_provider(|| wallet_state);
-    let _cor: Coroutine<()> = use_coroutine(move |mut _scope| {
-        // clone handles that are !Send: we are still on UI thread here
-        let mut wallet_state = wallet_state.clone();
-        let rx = RX.get().expect("channel not initialised").clone();
-
-        async move {
+    use_future(move || async move {
+        if let Some(rx) = RX.get().cloned() {
             while let Ok(pk) = rx.recv().await {
-                wallet_state.set(WalletState(pk)); // safe ‑ still UI thread
+                wallet_state.set(WalletState(pk));
             }
         }
     });
