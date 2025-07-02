@@ -70,14 +70,33 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendPublicKey(
             return;
         }
     };
-
-    // Send the received public key to the channel in main.rs.
-    // This decouples the FFI layer from the application state.
     log::info!(
         "Received public key from Kotlin, sending to channel: {}",
         pub_key_str
     );
     let msg = MsgFromKotlin::Pubkey(pub_key_str);
+    crate::send_msg_from_ffi(msg);
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_sendSignedTransaction(
+    mut env: JNIEnv,
+    _class: JClass,
+    signedTransaction: JString,
+) {
+    let tx_str: String = match env.get_string(&signedTransaction) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get public key string from JNI: {:?}", e);
+            return;
+        }
+    };
+    log::info!(
+        "Received signed transaction from Kotlin, sending to channel: {}",
+        tx_str
+    );
+    let msg = MsgFromKotlin::SignedTransaction(tx_str);
     crate::send_msg_from_ffi(msg);
 }
 
@@ -165,6 +184,43 @@ fn do_establish_mwa_session(
     Ok(rust_string)
 }
 
+// Helper function to call Kotlin's DioxusUtils.signTransaction
+fn do_sign_transaction(
+    env: &mut JNIEnv,
+    activity_jobject: jobject,
+    transaction: &[u8],
+) -> jni::errors::Result<String> {
+    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
+    const METHOD_NAME: &str = "signTransaction";
+    // JNI signature for: static String signTransaction(androidx.activity.ComponentActivity activity, byte[] transaction)
+    const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;[B)Ljava/lang/String;";
+
+    // Find the class
+    let class = env.find_class(CLASS_NAME)?;
+
+    // Convert raw jobject to JObject
+    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+
+    // Convert rust byte slice to java byte array
+    let transaction_jbyte_array = env.byte_array_from_slice(transaction)?;
+
+    // Prepare arguments
+    let transaction_jobject: JObject = transaction_jbyte_array.into();
+    let jvalue_args = [
+        JValue::from(&activity_obj),
+        JValue::from(&transaction_jobject),
+    ];
+
+    // Call static method
+    let result_jvalue = env.call_static_method(class, METHOD_NAME, METHOD_SIG, &jvalue_args)?;
+
+    // Process result
+    let jstring_obj = result_jvalue.l()?;
+    let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
+
+    Ok(rust_string)
+}
+
 /* ---------- Safe Rust API for the rest of the app ---------- */
 
 // /// Safely retrieves the public key that was sent from the Kotlin layer.
@@ -220,23 +276,30 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
     })
 }
 
-// /// Call Kotlin’s `DioxusUtils#establishMwaSession(ComponentActivity): String`
-// ///
-// /// This function requires a `jobject` that is a valid reference to an
-// /// `androidx.activity.ComponentActivity` instance from the Android environment.
-// pub fn call_kotlin_establish_mwa_session(activity_jobject: jobject) -> String {
-//     // Uses the with_env helper to get a JNIEnv for the current thread and attach/detach.
-//     with_env(|env| {
-//         // env is &mut JNIEnv
-//         match do_establish_mwa_session(env, activity_jobject) {
-//             Ok(s) => s,
-//             Err(e) => {
-//                 // Log the error using the log crate.
-//                 log::error!("JNI error calling DioxusUtils.establishMwaSession: {:?}", e);
-//                 // Return a formatted error message. Consider if more structured error
-//                 // handling is needed by the calling Rust code.
-//                 format!("JNI call to establishMwaSession failed: {:?}", e)
-//             }
-//         }
-//     })
-// }
+// New function callable from Dioxus to initiate MWA signing
+pub fn initiate_sign_transaction_from_dioxus(transaction: &[u8]) -> String {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. MWA signing cannot be initiated. Ensure WryActivity.create() has been called.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+
+    with_env(|env| {
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
+
+        match do_sign_transaction(env, raw_activity_jobject, transaction) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!(
+                    "JNI error in initiate_sign_transaction_from_dioxus: {:?}",
+                    e
+                );
+                format!("JNI call to signTransaction failed: {:?}", e)
+            }
+        }
+    })
+}

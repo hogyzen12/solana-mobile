@@ -5,12 +5,15 @@ use std::str::FromStr;
 use async_channel::{unbounded, Receiver, Sender};
 use dioxus::prelude::*;
 use once_cell::sync::OnceCell;
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{
+    pubkey::Pubkey,
+    transaction::{Transaction, VersionedTransaction},
+};
 
 // --- IPC Channel Setup ---
-#[derive(serde::Serialize, serde::Deserialize)]
 pub enum MsgFromKotlin {
     Pubkey(String),
+    SignedTransaction(String),
 }
 static TX: OnceCell<Sender<MsgFromKotlin>> = OnceCell::new();
 static RX: OnceCell<Receiver<MsgFromKotlin>> = OnceCell::new();
@@ -70,6 +73,15 @@ fn App() -> Element {
                             wallet_state.set(WalletState(pubkey));
                         }
                     }
+                    MsgFromKotlin::SignedTransaction(base58) => {
+                        if let Ok(bytes) = bs58::decode(base58.as_str()).into_vec() {
+                            if let Ok(tx) =
+                                bincode::deserialize::<VersionedTransaction>(bytes.as_slice())
+                            {
+                                log::info!("{:?}", tx);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -98,6 +110,17 @@ pub fn Hero() -> Element {
             }
         }
         div { "{wallet_state.cloned().0}" }
+        div {
+            button {
+                onclick: move |_| {
+                    let pubkey = wallet_state.cloned();
+                    let ix = solana_sdk::system_instruction::transfer(&pubkey.0, &pubkey.0, 1_000);
+                    let tx = Transaction::new_with_payer(&[ix], Some(&pubkey.0));
+                    let tx: VersionedTransaction = tx.into();
+                },
+                "sign transaction"
+            }
+        }
     }
 }
 
