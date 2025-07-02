@@ -2,6 +2,7 @@ pub mod ffi;
 
 use std::str::FromStr;
 
+use anyhow::Result;
 use async_channel::{unbounded, Receiver, Sender};
 use dioxus::prelude::*;
 use once_cell::sync::OnceCell;
@@ -52,6 +53,14 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 #[derive(Debug, Clone)]
 pub struct WalletState(Pubkey);
 
+#[derive(Debug, Clone)]
+pub enum TransactionState {
+    None,
+    WaitingForSignature,
+    Signed(VersionedTransaction),
+    Error(String),
+}
+
 fn main() {
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
@@ -62,8 +71,13 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    // init wallet state
     let mut wallet_state = use_signal(|| WalletState(Pubkey::default()));
     use_context_provider(|| wallet_state);
+    // init transaction sender state
+    let mut transaction_state = use_signal(|| TransactionState::None);
+    use_context_provider(|| transaction_state);
+    // listen for messages from kotlin
     use_future(move || async move {
         if let Some(rx) = RX.get().cloned() {
             while let Ok(msg) = rx.recv().await {
@@ -74,11 +88,18 @@ fn App() -> Element {
                         }
                     }
                     MsgFromKotlin::SignedTransaction(base58) => {
-                        if let Ok(bytes) = bs58::decode(base58.as_str()).into_vec() {
-                            if let Ok(tx) =
-                                bincode::deserialize::<VersionedTransaction>(bytes.as_slice())
-                            {
-                                log::info!("{:?}", tx);
+                        let res: Result<VersionedTransaction> = (|| -> Result<_> {
+                            let bytes = bs58::decode(base58.as_str()).into_vec()?;
+                            let tx =
+                                bincode::deserialize::<VersionedTransaction>(bytes.as_slice())?;
+                            Ok(tx)
+                        })();
+                        match res {
+                            Ok(tx) => {
+                                transaction_state.set(TransactionState::Signed(tx));
+                            }
+                            Err(err) => {
+                                transaction_state.set(TransactionState::Error(err.to_string()));
                             }
                         }
                     }
@@ -98,6 +119,7 @@ fn App() -> Element {
 #[component]
 pub fn Hero() -> Element {
     let wallet_state = use_context::<Signal<WalletState>>();
+    let mut transaction_state = use_context::<Signal<TransactionState>>();
     rsx! {
         div { id: "hero",
             img { src: HEADER_SVG, id: "header" }
@@ -117,8 +139,25 @@ pub fn Hero() -> Element {
                     let ix = solana_sdk::system_instruction::transfer(&pubkey.0, &pubkey.0, 1_000);
                     let tx = Transaction::new_with_payer(&[ix], Some(&pubkey.0));
                     let tx: VersionedTransaction = tx.into();
+                    match bincode::serialize(&tx) {
+                        Ok(bytes) => {
+                            transaction_state.set(TransactionState::WaitingForSignature);
+                            crate::ffi::initiate_sign_transaction_from_dioxus(bytes.as_slice());
+                        }
+                        Err(err) => {
+                            transaction_state.set(TransactionState::Error(err.to_string()));
+                        }
+                    }
                 },
                 "sign transaction"
+            }
+        }
+        div {
+            match transaction_state.cloned() {
+                TransactionState::None => "no tx".to_string(),
+                TransactionState::WaitingForSignature => "waiting for sig".to_string(),
+                TransactionState::Signed(tx) => format!("{:?}", tx),
+                TransactionState::Error(err) => err.to_string(),
             }
         }
     }
