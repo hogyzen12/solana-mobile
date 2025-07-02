@@ -277,6 +277,8 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
 }
 
 // New function callable from Dioxus to initiate MWA signing
+// NOTE: This function must be invoked from the main dioxus thread,
+// that means we cannot call this function from inside a dioxus::spawn
 pub fn initiate_sign_transaction_from_dioxus(transaction: &[u8]) -> String {
     let activity_global_ref = match WRY_ACTIVITY.get() {
         Some(glob_ref) => glob_ref,
