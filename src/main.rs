@@ -6,10 +6,14 @@ use anyhow::Result;
 use async_channel::{unbounded, Receiver, Sender};
 use dioxus::prelude::*;
 use once_cell::sync::OnceCell;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey,
     transaction::{Transaction, VersionedTransaction},
 };
+
+const RPC_URL: &str =
+    "https://mainnet.helius-rpc.com/?api-key=3f3be5c7-b6c6-4ec2-9835-5aeed6341f2e";
 
 // --- IPC Channel Setup ---
 pub enum MsgFromKotlin {
@@ -96,7 +100,19 @@ fn App() -> Element {
                         })();
                         match res {
                             Ok(tx) => {
-                                transaction_state.set(TransactionState::Signed(tx));
+                                spawn(async move {
+                                    // update state
+                                    transaction_state.set(TransactionState::Signed(tx.clone()));
+                                    // send transaction
+                                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                                    let client = RpcClient::new(RPC_URL.to_string());
+                                    if let Err(err) = client.send_transaction(&tx).await {
+                                        transaction_state
+                                            .set(TransactionState::Error(err.to_string()));
+                                    } else {
+                                        transaction_state.set(TransactionState::None);
+                                    }
+                                });
                             }
                             Err(err) => {
                                 transaction_state.set(TransactionState::Error(err.to_string()));
@@ -120,6 +136,16 @@ fn App() -> Element {
 pub fn Hero() -> Element {
     let wallet_state = use_context::<Signal<WalletState>>();
     let mut transaction_state = use_context::<Signal<TransactionState>>();
+    let transaction: Resource<Result<VersionedTransaction>> = use_resource(move || async move {
+        let pubkey = wallet_state.cloned();
+        let ix = solana_sdk::system_instruction::transfer(&pubkey.0, &pubkey.0, 1_000);
+        let mut tx = Transaction::new_with_payer(&[ix], Some(&pubkey.0));
+        let client = RpcClient::new(RPC_URL.to_string());
+        let hash = client.get_latest_blockhash().await?;
+        tx.message.recent_blockhash = hash;
+        let tx: VersionedTransaction = tx.into();
+        Ok(tx)
+    });
     rsx! {
         div { id: "hero",
             img { src: HEADER_SVG, id: "header" }
@@ -135,17 +161,16 @@ pub fn Hero() -> Element {
         div {
             button {
                 onclick: move |_| {
-                    let pubkey = wallet_state.cloned();
-                    let ix = solana_sdk::system_instruction::transfer(&pubkey.0, &pubkey.0, 1_000);
-                    let tx = Transaction::new_with_payer(&[ix], Some(&pubkey.0));
-                    let tx: VersionedTransaction = tx.into();
-                    match bincode::serialize(&tx) {
-                        Ok(bytes) => {
-                            transaction_state.set(TransactionState::WaitingForSignature);
-                            crate::ffi::initiate_sign_transaction_from_dioxus(bytes.as_slice());
-                        }
-                        Err(err) => {
-                            transaction_state.set(TransactionState::Error(err.to_string()));
+                    let tx = &*transaction.read();
+                    if let Some(Ok(tx)) = tx {
+                        match bincode::serialize(&tx) {
+                            Ok(bytes) => {
+                                transaction_state.set(TransactionState::WaitingForSignature);
+                                crate::ffi::initiate_sign_transaction_from_dioxus(bytes.as_slice());
+                            }
+                            Err(err) => {
+                                transaction_state.set(TransactionState::Error(err.to_string()));
+                            }
                         }
                     }
                 },
