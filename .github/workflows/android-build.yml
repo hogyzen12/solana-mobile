@@ -8,8 +8,8 @@ on:
     branches: [ main ]
 
 env:
-  # NDK version - using the latest known public version
-  NDK_VERSION: "26.3.11579264"
+  # NDK version in the format expected by the setup-ndk action
+  NDK_VERSION: "r26d"
   # OpenSSL version from your scripts
   OPENSSL_VERSION: "3.0.16"
 
