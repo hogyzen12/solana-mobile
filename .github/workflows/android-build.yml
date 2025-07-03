@@ -1,0 +1,88 @@
+
+name: Build Android App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  # NDK version from your scripts
+  NDK_VERSION: "29.0.13599879"
+  # OpenSSL version from your scripts
+  OPENSSL_VERSION: "3.0.16"
+
+jobs:
+  build:
+    # Use a matrix to test on both archs, but ubuntu-latest is usually x86_64
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v2
+
+    - name: Set up Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: ${{ env.NDK_VERSION }}
+        add-to-path: true
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        targets: aarch64-linux-android
+
+    - name: Clone Dioxus fork
+      uses: actions/checkout@v3
+      with:
+        repository: regolith-labs/dioxus
+        path: dioxus
+
+    - name: Install Dioxus CLI from fork
+      run: cargo install --path ./dioxus/packages/cli --locked
+
+    - name: Cache OpenSSL
+      id: cache-openssl
+      uses: actions/cache@v3
+      with:
+        path: ~/openssl-${{ env.OPENSSL_VERSION }}/android-build
+        key: ${{ runner.os }}-openssl-${{ env.OPENSSL_VERSION }}-aarch64-linux-android
+
+    - name: Build OpenSSL for Android
+      if: steps.cache-openssl.outputs.cache-hit != 'true'
+      run: sh ./scripts/build_openssl_android.sh
+
+    - name: Configure environment for build
+      run: |
+        echo "JAVA_HOME=${{ env.JAVA_HOME }}" >> $GITHUB_ENV
+        echo "ANDROID_HOME=${{ env.ANDROID_HOME }}" >> $GITHUB_ENV
+        echo "NDK_HOME=${{ env.ANDROID_NDK_HOME }}" >> $GITHUB_ENV
+        # The build_openssl script sets these up, but we need them for subsequent steps
+        echo "OPENSSL_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build" >> $GITHUB_ENV
+        echo "OPENSSL_LIB_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/lib" >> $GITHUB_ENV
+        echo "OPENSSL_INCLUDE_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/include" >> $GITHUB_ENV
+        echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+
+    - name: Run Android Build Script
+      run: sh ./scripts/android.build.sh
+
+    - name: Run Android Bundle Script
+      run: sh ./scripts/android.bundle.sh
+
+    - name: Upload AAB as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-release-bundle
+        path: dist/android/mobile-release.aab
+
