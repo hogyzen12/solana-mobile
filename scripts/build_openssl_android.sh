@@ -12,8 +12,9 @@ INSTALL_DIR="${BUILD_ROOT}/android-build"
 # Pick your NDK installation here
 # The `setup-ndk` GitHub action exports `ANDROID_NDK_HOME`.
 # The script will default to `ANDROID_NDK_HOME` if `NDK_HOME` is not set.
-if [ -z "${NDK_HOME}" ]; then
-  if [ -n "${ANDROID_NDK_HOME}" ]; then
+# Use `${VAR-}` to avoid unbound variable errors with `set -u`.
+if [ -z "${NDK_HOME-}" ]; then
+  if [ -n "${ANDROID_NDK_HOME-}" ]; then
     NDK_HOME="${ANDROID_NDK_HOME}"
   else
     # Fallback for local development on macOS
