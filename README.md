@@ -2,6 +2,21 @@
 
 This is a sample Dioxus application that demonstrates how to integrate with the Solana Mobile Wallet Adapter (MWA) on Android. The app currently has implementations for `signTransaction` and `authorize` (connect), with `signMessage` to be implemented shortly.
 
+To achieve this, we have forked the `dioxus-cli` and `wry` (the underlying web-view library from Tauri) to allow for the embedding of Solana dependencies directly into the Android Gradle build. This setup is complemented by a thin Kotlin layer that manages the Foreign Function Interface (FFI) between Rust and Kotlin, enabling seamless communication for the Solana wallet methods.
+
+## Setup
+
+Before you can build this project, you must install the forked `dioxus-cli`. You'll need to clone our forks of the dioxus and wry repos.
+
+- Dioxus: https://github.com/regolith-labs/dioxus
+- Wry: https://github.com/regolith-labs/wry
+
+Clone the forked `dioxus` repository, navigate to the `packages/cli` directory, and run the following command:
+
+```bash
+cargo install --path . --locked
+```
+
 ## Android Build Scripts
 
 This project uses a set of scripts to build, bundle, and update the Android application. These scripts are located in the `scripts/` directory and should be run from the root of the project.
