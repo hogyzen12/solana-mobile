@@ -2,7 +2,9 @@
 # android.update.sh - Build an APK set from the AAB and install it on a connected Android device
 
 # Env
-source ./android.env
+# Source the environment file from the same directory as the script
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+source "$SCRIPT_DIR/android.env"
 
 # Paths
 APP_NAME="mobile"
