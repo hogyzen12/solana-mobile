@@ -43,6 +43,9 @@ jobs:
         toolchain: nightly
         targets: aarch64-linux-android
 
+    - name: Set Nightly as Default
+      run: rustup default nightly
+
     - name: Clone Dioxus fork
       uses: actions/checkout@v4
       with:
