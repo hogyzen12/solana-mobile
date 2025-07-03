@@ -12,8 +12,7 @@ use solana_sdk::{
     transaction::{Transaction, VersionedTransaction},
 };
 
-const RPC_URL: &str =
-    "https://mainnet.helius-rpc.com/?api-key=3f3be5c7-b6c6-4ec2-9835-5aeed6341f2e";
+const RPC_URL: &str = "https://rpc.ironforge.network/mainnet?apiKey=01J4NJDYJXSGJYE3AN6VXEB5VR";
 
 // --- IPC Channel Setup ---
 pub enum MsgFromKotlin {
