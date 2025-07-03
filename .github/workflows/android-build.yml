@@ -66,7 +66,9 @@ jobs:
 
     - name: Build OpenSSL for Android
       if: steps.cache-openssl.outputs.cache-hit != 'true'
-      run: sh ./scripts/build_openssl_android.sh
+      run: bash ./scripts/build_openssl_android.sh
+      env:
+        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
 
     - name: Configure environment for build
       run: |
