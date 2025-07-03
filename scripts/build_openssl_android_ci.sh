@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -9,37 +10,19 @@ OPENSSL_URL="https://www.openssl.org/source/${OPENSSL_TARBALL}"
 BUILD_ROOT="$HOME/openssl-${OPENSSL_VERSION}"
 INSTALL_DIR="${BUILD_ROOT}/android-build"
 
-# Pick your NDK installation here
-# The `setup-ndk` GitHub action exports `ANDROID_NDK_HOME`.
-# The script will default to `ANDROID_NDK_HOME` if `NDK_HOME` is not set.
-# Use `${VAR-}` to avoid unbound variable errors with `set -u`.
-if [ -z "${NDK_HOME-}" ]; then
-  if [ -n "${ANDROID_NDK_HOME-}" ]; then
-    NDK_HOME="${ANDROID_NDK_HOME}"
-  else
-    # Fallback for local development on macOS
-    NDK_HOME="${HOME}/Library/Android/sdk/ndk/29.0.13599879"
-  fi
+# This script is for CI, where ANDROID_NDK_HOME is always provided.
+if [ -z "${ANDROID_NDK_HOME-}" ]; then
+  echo "Error: ANDROID_NDK_HOME is not set. This script is intended for CI use."
+  exit 1
 fi
+NDK_HOME="${ANDROID_NDK_HOME}"
 
-# Minimum Android API level (must correspond to aarch64-linux-android<API>-clang wrapper)
+# Minimum Android API level
 API=24
 
 # ───── Detect host toolchain directory ─────
 
-if [[ "$(uname)" == "Darwin" ]]; then
-  HOST_TAG="darwin-x86_64"
-  # Newer NDKs may ship darwin-arm64 as well
-  if [ -d "${NDK_HOME}/toolchains/llvm/prebuilt/darwin-arm64" ]; then
-    HOST_TAG="darwin-arm64"
-  fi
-elif [[ "$(uname)" == "Linux" ]]; then
-  HOST_TAG="linux-x86_64"
-else
-  echo "Unsupported host OS: $(uname)"
-  exit 1
-fi
-
+HOST_TAG="linux-x86_64"
 TOOLCHAIN="${NDK_HOME}/toolchains/llvm/prebuilt/${HOST_TAG}"
 CLANG="${TOOLCHAIN}/bin/aarch64-linux-android${API}-clang"
 AR_TOOL="${TOOLCHAIN}/bin/llvm-ar"
@@ -73,20 +56,16 @@ tar xzf "${OPENSSL_TARBALL}"
 cd "openssl-${OPENSSL_VERSION}"
 
 echo "Configuring for android-arm64 (API ${API})..."
-./Configure android-arm64 \
-  -D__ANDROID_API__=${API} \
-  --prefix="${INSTALL_DIR}" \
+./Configure android-arm64 \\
+  -D__ANDROID_API__=${API} \\
+  --prefix="${INSTALL_DIR}" \\
   --openssldir="${INSTALL_DIR}"
 
 echo "Building (make -j)…"
-if [[ "$(uname)" == "Darwin" ]]; then
-  NCPU=$(sysctl -n hw.ncpu)
-else
-  NCPU=$(nproc)
-fi
-make -j"${NCPU}"
+make -j"$(nproc)"
 
 echo "Installing to ${INSTALL_DIR}…"
 make install_sw
 
 echo "✅ OpenSSL ${OPENSSL_VERSION} built and installed to ${INSTALL_DIR}"
+
