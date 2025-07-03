@@ -52,6 +52,8 @@ jobs:
         repository: regolith-labs/dioxus
         path: dioxus
 
+    - name: Show Rust toolchain
+      run: rustup show
     - name: Install Dioxus CLI from fork
       run: cargo install --path ./dioxus/packages/cli --locked
 
