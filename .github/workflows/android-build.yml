@@ -20,7 +20,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Java
       uses: actions/setup-java@v3
@@ -44,7 +44,7 @@ jobs:
         targets: aarch64-linux-android
 
     - name: Clone Dioxus fork
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: regolith-labs/dioxus
         path: dioxus
@@ -54,7 +54,7 @@ jobs:
 
     - name: Cache OpenSSL
       id: cache-openssl
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/openssl-${{ env.OPENSSL_VERSION }}/android-build
         key: ${{ runner.os }}-openssl-${{ env.OPENSSL_VERSION }}-aarch64-linux-android
@@ -81,7 +81,7 @@ jobs:
       run: sh ./scripts/android.bundle.sh
 
     - name: Upload AAB as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: android-release-bundle
         path: dist/android/mobile-release.aab
