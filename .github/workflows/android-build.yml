@@ -40,11 +40,11 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: nightly
+        toolchain: nightly-2025-06-15
         targets: aarch64-linux-android
 
     - name: Set Nightly as Default
-      run: rustup default nightly
+      run: rustup default nightly-2025-06-15
 
     - name: Clone Dioxus fork
       uses: actions/checkout@v4
