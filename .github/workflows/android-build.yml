@@ -32,6 +32,7 @@ jobs:
       uses: android-actions/setup-android@v2
 
     - name: Set up Android NDK
+      id: setup-ndk
       uses: nttld/setup-ndk@v1
       with:
         ndk-version: ${{ env.NDK_VERSION }}
@@ -68,13 +69,13 @@ jobs:
       if: steps.cache-openssl.outputs.cache-hit != 'true'
       run: bash ./scripts/build_openssl_android.sh
       env:
-        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
 
     - name: Configure environment for build
       run: |
         echo "JAVA_HOME=${{ env.JAVA_HOME }}" >> $GITHUB_ENV
         echo "ANDROID_HOME=${{ env.ANDROID_HOME }}" >> $GITHUB_ENV
-        echo "NDK_HOME=${{ env.ANDROID_NDK_HOME }}" >> $GITHUB_ENV
+        echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
         # The build_openssl script sets these up, but we need them for subsequent steps
         echo "OPENSSL_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build" >> $GITHUB_ENV
         echo "OPENSSL_LIB_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/lib" >> $GITHUB_ENV
