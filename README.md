@@ -1,3 +1,35 @@
+### Android Build Scripts
+
+This project uses a set of scripts to build, bundle, and update the Android application. These scripts are located in the `scripts/` directory and should be run from the root of the project.
+
+#### `android.env`
+
+This file is crucial for the Android build process. It sets up the necessary environment variables, including `JAVA_HOME`, `ANDROID_HOME`, and paths to the NDK and other build tools. Before running any of the build scripts, you must ensure that the paths in `android.env` are correct for your local development environment.
+
+#### Build (`scripts/android.build.sh`)
+
+This script compiles the Rust code into a native Android library using the Dioxus CLI. It targets the Android platform and creates a release build.
+
+```bash
+sh scripts/android.build.sh
+```
+
+#### Bundle (`scripts/android.bundle.sh`)
+
+After a successful build, this script bundles the application into an Android App Bundle (AAB). The AAB is a publishing format that includes all your app’s compiled code and resources.
+
+```bash
+sh scripts/android.bundle.sh
+```
+
+#### Update (`scripts/android.update.sh`)
+
+This script takes the generated AAB, builds a universal APK set, and installs it on a connected Android device. This is useful for quickly testing changes on a physical device.
+
+```bash
+sh scripts/android.update.sh
+```
+
 ### Linker Version Script (`empty.version`)
 
 The `empty.version` file is a linker version script used during the Android build process. It controls the visibility of symbols (functions and data) in the compiled native library.
