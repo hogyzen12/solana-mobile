@@ -42,7 +42,7 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: nightly-2025-06-15
-        targets: aarch64-linux-android
+        targets: aarch64-linux-android, x86_64-linux-android
 
     - name: Set Nightly as Default
       run: rustup default nightly-2025-06-15
@@ -83,10 +83,10 @@ jobs:
         echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
 
     - name: Run Android Build Script
-      run: sh ./scripts/android.build.sh
+      run: bash ./scripts/android.build.sh
 
     - name: Run Android Bundle Script
-      run: sh ./scripts/android.bundle.sh
+      run: bash ./scripts/android.bundle.sh
 
     - name: Upload AAB as artifact
       uses: actions/upload-artifact@v4
