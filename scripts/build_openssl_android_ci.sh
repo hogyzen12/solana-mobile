@@ -56,9 +56,9 @@ tar xzf "${OPENSSL_TARBALL}"
 cd "openssl-${OPENSSL_VERSION}"
 
 echo "Configuring for android-arm64 (API ${API})..."
-./Configure android-arm64 \\
-  -D__ANDROID_API__=${API} \\
-  --prefix="${INSTALL_DIR}" \\
+./Configure android-arm64 \
+  -D__ANDROID_API__=${API} \
+  --prefix="${INSTALL_DIR}" \
   --openssldir="${INSTALL_DIR}"
 
 echo "Building (make -j)…"
