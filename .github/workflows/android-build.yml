@@ -82,6 +82,20 @@ jobs:
         echo "OPENSSL_INCLUDE_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/include" >> $GITHUB_ENV
         echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
 
+        # Explicitly configure the toolchain for Cargo
+        API=24
+        TOOLCHAIN_DIR="${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+        
+        # Configure for aarch64-linux-android
+        echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN_DIR/aarch64-linux-android$API-clang" >> $GITHUB_ENV
+        echo "CC_aarch64_linux_android=$TOOLCHAIN_DIR/aarch64-linux-android$API-clang" >> $GITHUB_ENV
+        echo "AR_aarch64_linux_android=$TOOLCHAIN_DIR/llvm-ar" >> $GITHUB_ENV
+        
+        # Configure for x86_64-linux-android
+        echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$TOOLCHAIN_DIR/x86_64-linux-android$API-clang" >> $GITHUB_ENV
+        echo "CC_x86_64_linux_android=$TOOLCHAIN_DIR/x86_64-linux-android$API-clang" >> $GITHUB_ENV
+        echo "AR_x86_64_linux_android=$TOOLCHAIN_DIR/llvm-ar" >> $GITHUB_ENV
+
     - name: Run Android Build Script
       run: bash ./scripts/android.build.sh
 
