@@ -15,7 +15,6 @@ env:
 
 jobs:
   build:
-    # Use a matrix to test on both archs, but ubuntu-latest is usually x86_64
     runs-on: ubuntu-latest
     
     steps:
@@ -42,7 +41,7 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: nightly-2025-06-15
-        targets: aarch64-linux-android, x86_64-linux-android
+        targets: aarch64-linux-android
 
     - name: Set Nightly as Default
       run: rustup default nightly-2025-06-15
@@ -63,7 +62,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/openssl-${{ env.OPENSSL_VERSION }}/android-build
-        key: ${{ runner.os }}-openssl-${{ env.OPENSSL_VERSION }}-aarch64-x86_64-linux-android
+        key: ${{ runner.os }}-openssl-${{ env.OPENSSL_VERSION }}-aarch64-linux-android
 
     - name: Build OpenSSL for Android
       if: steps.cache-openssl.outputs.cache-hit != 'true'
@@ -78,13 +77,9 @@ jobs:
         echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
         
         # Set OpenSSL env vars for the openssl-rs crate
-        OPENSSL_BUILD_DIR="$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build"
-        echo "OPENSSL_DIR_AARCH64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/aarch64-linux-android" >> $GITHUB_ENV
-        echo "OPENSSL_LIB_DIR_AARCH64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/aarch64-linux-android/lib" >> $GITHUB_ENV
-        echo "OPENSSL_INCLUDE_DIR_AARCH64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/aarch64-linux-android/include" >> $GITHUB_ENV
-        echo "OPENSSL_DIR_X86_64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/x86_64-linux-android" >> $GITHUB_ENV
-        echo "OPENSSL_LIB_DIR_X86_64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/x86_64-linux-android/lib" >> $GITHUB_ENV
-        echo "OPENSSL_INCLUDE_DIR_X86_64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/x86_64-linux-android/include" >> $GITHUB_ENV
+        echo "OPENSSL_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build" >> $GITHUB_ENV
+        echo "OPENSSL_LIB_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/lib" >> $GITHUB_ENV
+        echo "OPENSSL_INCLUDE_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/include" >> $GITHUB_ENV
         echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
 
         # Explicitly configure the toolchain for Cargo
@@ -95,11 +90,6 @@ jobs:
         echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN_DIR/aarch64-linux-android$API-clang" >> $GITHUB_ENV
         echo "CC_aarch64_linux_android=$TOOLCHAIN_DIR/aarch64-linux-android$API-clang" >> $GITHUB_ENV
         echo "AR_aarch64_linux_android=$TOOLCHAIN_DIR/llvm-ar" >> $GITHUB_ENV
-        
-        # Configure for x86_64-linux-android
-        echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$TOOLCHAIN_DIR/x86_64-linux-android$API-clang" >> $GITHUB_ENV
-        echo "CC_x86_64_linux_android=$TOOLCHAIN_DIR/x86_64-linux-android$API-clang" >> $GITHUB_ENV
-        echo "AR_x86_64_linux_android=$TOOLCHAIN_DIR/llvm-ar" >> $GITHUB_ENV
 
     - name: Run Android Build Script
       run: bash ./scripts/android.build.sh
@@ -112,4 +102,3 @@ jobs:
       with:
         name: android-release-bundle
         path: dist/android/mobile-release.aab
-

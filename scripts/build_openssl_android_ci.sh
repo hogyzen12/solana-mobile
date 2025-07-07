@@ -8,7 +8,7 @@ OPENSSL_VERSION="3.0.16"
 OPENSSL_TARBALL="openssl-${OPENSSL_VERSION}.tar.gz"
 OPENSSL_URL="https://www.openssl.org/source/${OPENSSL_TARBALL}"
 BUILD_ROOT="$HOME/openssl-${OPENSSL_VERSION}"
-INSTALL_DIR_BASE="${BUILD_ROOT}/android-build"
+INSTALL_DIR="${BUILD_ROOT}/android-build"
 
 # This script is for CI, where ANDROID_NDK_HOME is always provided.
 if [ -z "${ANDROID_NDK_HOME-}" ]; then
@@ -45,40 +45,20 @@ echo "Extracting source..."
 tar xzf "${OPENSSL_TARBALL}"
 cd "openssl-${OPENSSL_VERSION}"
 
-# ───────── Architectures to build ─────────
+# ───────── Configure, build & install ─────────
 
-# Mapping from Rust target triple to OpenSSL configure target
-declare -A arch_map
-arch_map["aarch64-linux-android"]="android-arm64"
-arch_map["x86_64-linux-android"]="android-x86_64"
+echo "Configuring for android-arm64 (API ${API})..."
+./Configure android-arm64 \
+  -D__ANDROID_API__=${API} \
+  --prefix="${INSTALL_DIR}" \
+  --openssldir="${INSTALL_DIR}" \
+  --libdir=lib
 
-# ───────── Build for each architecture ─────────
+echo "Building (make -j)…"
+make -j"$(nproc)"
 
-for rust_arch in "${!arch_map[@]}"; do
-    openssl_arch=${arch_map[$rust_arch]}
-    INSTALL_DIR_ARCH="${INSTALL_DIR_BASE}/${rust_arch}"
-    
-    echo "--------------------------------------------------"
-    echo "Building OpenSSL for ${rust_arch} (${openssl_arch})"
-    echo "--------------------------------------------------"
-    
-    if [ -f "Makefile" ]; then
-        make clean
-    fi
+echo "Installing to ${INSTALL_DIR}…"
+make install_sw
 
-    echo "Configuring for ${openssl_arch} (API ${API})..."
-    ./Configure "${openssl_arch}" \
-      -D__ANDROID_API__=${API} \
-      --prefix="${INSTALL_DIR_ARCH}" \
-      --openssldir="${INSTALL_DIR_ARCH}" \
-      --libdir=lib
-
-    echo "Building (make -j)…"
-    make -j"$(nproc)"
-
-    echo "Installing to ${INSTALL_DIR_ARCH}…"
-    make install_sw
-done
-
-echo "✅ OpenSSL built for all architectures."
+echo "✅ OpenSSL ${OPENSSL_VERSION} for aarch64-linux-android built and installed to ${INSTALL_DIR}"
 
