@@ -56,8 +56,8 @@ This project uses GitHub Actions for Continuous Integration (CI). The workflow i
 The CI runner automates the following key steps:
 - **Sets up the environment**: It installs the correct versions of Java, the Android SDK, and the Android NDK.
 - **Installs Rust**: It sets up the specific nightly toolchain required for the project.
-- **Builds Dependencies**: It compiles required dependencies, such as OpenSSL, for the Android target.
-- **Builds the App**: It uses or fork of the Dioxus CLI to compile the Rust code and build the Android application.
+- **Builds Dependencies**: It compiles required dependencies (OpenSSL, etc.) for the Android target.
+- **Builds the App**: It uses our fork of the Dioxus CLI to compile the Rust code and build the Android application.
 - **Bundles the App**: It generates the Android App Bundle (AAB) for release.
 - **Uploads Artifacts**: The final AAB is uploaded as a build artifact, making it available for download and testing.
 
