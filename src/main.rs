@@ -95,6 +95,7 @@ fn App() -> Element {
     use_context_provider(|| transaction_state);
     // init message sender state
     let mut message_state = use_signal(|| MessageState::None);
+    use_context_provider(|| message_state);
     // listen for messages from kotlin
     use_future(move || async move {
         if let Some(rx) = RX.get().cloned() {
@@ -134,16 +135,37 @@ fn App() -> Element {
                         }
                     }
                     MsgFromKotlin::SignedMessage(signature) => {
-                        if let MessageState::WaitingForSignature(message) = message_state.cloned() {
-                            let res: Result<()> = (|| -> Result<_> {
-                                let bytes = bs58::decode(signature.as_str()).into_vec()?;
-                                let bytes: [u8; 64] = bytes.try_into().map_err(|_| {
-                                    anyhow::anyhow!("could not parse vec as byte array")
-                                })?;
-                                let sig = Signature::from(bytes);
-
-                                Ok(())
-                            })();
+                        if let (
+                            MessageState::WaitingForSignature(message),
+                            WalletState::Pubkey(pubkey),
+                        ) = (message_state.cloned(), wallet_state.cloned())
+                        {
+                            spawn(async move {
+                                let res: Result<()> = (async || -> Result<_> {
+                                    let sig_bytes = bs58::decode(signature.as_str()).into_vec()?;
+                                    let sig_bytes: [u8; 64] =
+                                        sig_bytes.try_into().map_err(|_| {
+                                            anyhow::anyhow!("could not parse vec as byte array")
+                                        })?;
+                                    let sig = Signature::from(sig_bytes);
+                                    let message_bytes = bincode::serialize(message.as_str())?;
+                                    let verified = sig.verify(
+                                        pubkey.to_bytes().as_slice(),
+                                        message_bytes.as_slice(),
+                                    );
+                                    if verified {
+                                        tokio::time::sleep(tokio::time::Duration::from_secs(3))
+                                            .await;
+                                        message_state
+                                            .set(MessageState::Signed(message, sig_bytes.to_vec()));
+                                    }
+                                    Ok(())
+                                })()
+                                .await;
+                                if let Err(err) = res {
+                                    message_state.set(MessageState::Error(err.to_string()));
+                                }
+                            });
                         } else {
                             message_state
                                 .set(MessageState::Error("no message available".to_string()));
@@ -164,7 +186,9 @@ fn App() -> Element {
 
 #[component]
 pub fn Hero() -> Element {
+    // get wallet state context
     let wallet_state = use_context::<Signal<WalletState>>();
+    // get transaction state context
     let mut transaction_state = use_context::<Signal<TransactionState>>();
     let transaction: Resource<Result<VersionedTransaction>> = use_resource(move || async move {
         let pubkey = wallet_state.cloned();
@@ -178,6 +202,17 @@ pub fn Hero() -> Element {
             Ok(tx)
         } else {
             Err(anyhow::anyhow!("wallet disconnected"))
+        }
+    });
+    // get message signature state context
+    let mut message_state = use_context::<Signal<MessageState>>();
+    use_effect(move || {
+        let pubkey = wallet_state.cloned();
+        if let WalletState::Pubkey(_pubkey) = pubkey {
+            let message = "hello world".to_string();
+            message_state.set(MessageState::WaitingForSignature(message));
+        } else {
+            message_state.set(MessageState::Error("wallet disconnected".to_string()));
         }
     });
     rsx! {
@@ -220,6 +255,27 @@ pub fn Hero() -> Element {
                 TransactionState::WaitingForSignature => "waiting for sig".to_string(),
                 TransactionState::Signed(tx) => format!("{:?}", tx),
                 TransactionState::Error(err) => err.to_string(),
+            }
+        }
+        div {
+            button {
+                onclick: move |_| {
+                    if let MessageState::WaitingForSignature(message) = message_state.cloned() {
+                        if let Ok(bytes) = bincode::serialize(message.as_str()) {
+                            message_state.set(MessageState::WaitingForSignature(message));
+                            crate::ffi::initiate_sign_message_from_dioxus(bytes.as_slice());
+                        }
+                    }
+                },
+                "sign message"
+            }
+        }
+        div {
+            match message_state.cloned() {
+                MessageState::None => "no message".to_string(),
+                MessageState::WaitingForSignature(_) => "waiting for signature".to_string(),
+                MessageState::Signed(_, _) => "signed".to_string(),
+                MessageState::Error(err) => err,
             }
         }
     }
