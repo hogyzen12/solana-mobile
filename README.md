@@ -1,6 +1,6 @@
 # Solana Mobile Dioxus Example
 
-This is a sample Dioxus application that demonstrates how to integrate with the Solana Mobile Wallet Adapter (MWA) on Android. The app currently has implementations for `signTransaction` and `authorize` (connect), with `signMessage` to be implemented shortly.
+This is a sample Dioxus application that demonstrates how to integrate with the Solana Mobile Wallet Adapter (MWA) on Android. The app currently has implementations for `signTransaction`, `signMessage`, and `authorize` (connect).
 
 To achieve this, we have forked the `dioxus-cli` and `wry` (the underlying web-view library from Tauri) to allow for the embedding of Solana dependencies directly into the Android Gradle build. This setup is complemented by a thin Kotlin layer that manages the Foreign Function Interface (FFI) between Rust and Kotlin, enabling seamless communication for the Solana wallet methods.
 
