@@ -63,7 +63,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/openssl-${{ env.OPENSSL_VERSION }}/android-build
-        key: ${{ runner.os }}-openssl-${{ env.OPENSSL_VERSION }}-aarch64-linux-android
+        key: ${{ runner.os }}-openssl-${{ env.OPENSSL_VERSION }}-aarch64-x86_64-linux-android
 
     - name: Build OpenSSL for Android
       if: steps.cache-openssl.outputs.cache-hit != 'true'
@@ -76,10 +76,15 @@ jobs:
         echo "JAVA_HOME=${{ env.JAVA_HOME }}" >> $GITHUB_ENV
         echo "ANDROID_HOME=${{ env.ANDROID_HOME }}" >> $GITHUB_ENV
         echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-        # The build_openssl script sets these up, but we need them for subsequent steps
-        echo "OPENSSL_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build" >> $GITHUB_ENV
-        echo "OPENSSL_LIB_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/lib" >> $GITHUB_ENV
-        echo "OPENSSL_INCLUDE_DIR=$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build/include" >> $GITHUB_ENV
+        
+        # Set OpenSSL env vars for the openssl-rs crate
+        OPENSSL_BUILD_DIR="$HOME/openssl-${{ env.OPENSSL_VERSION }}/android-build"
+        echo "OPENSSL_DIR_AARCH64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/aarch64-linux-android" >> $GITHUB_ENV
+        echo "OPENSSL_LIB_DIR_AARCH64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/aarch64-linux-android/lib" >> $GITHUB_ENV
+        echo "OPENSSL_INCLUDE_DIR_AARCH64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/aarch64-linux-android/include" >> $GITHUB_ENV
+        echo "OPENSSL_DIR_X86_64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/x86_64-linux-android" >> $GITHUB_ENV
+        echo "OPENSSL_LIB_DIR_X86_64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/x86_64-linux-android/lib" >> $GITHUB_ENV
+        echo "OPENSSL_INCLUDE_DIR_X86_64_LINUX_ANDROID=${OPENSSL_BUILD_DIR}/x86_64-linux-android/include" >> $GITHUB_ENV
         echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
 
         # Explicitly configure the toolchain for Cargo
