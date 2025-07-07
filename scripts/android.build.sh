@@ -3,4 +3,4 @@ if [ -z "${CI-}" ]; then
   SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
   source "$SCRIPT_DIR/android.env"
 fi
-dx build --platform android --release --verbose
+dx build --platform android --release --verbose --target aarch64-linux-android
