@@ -18,6 +18,7 @@ const RPC_URL: &str = "https://rpc.ironforge.network/mainnet?apiKey=01J4NJDYJXSG
 pub enum MsgFromKotlin {
     Pubkey(String),
     SignedTransaction(String),
+    SignedMessage(String),
 }
 static TX: OnceCell<Sender<MsgFromKotlin>> = OnceCell::new();
 static RX: OnceCell<Receiver<MsgFromKotlin>> = OnceCell::new();
@@ -117,6 +118,9 @@ fn App() -> Element {
                                 transaction_state.set(TransactionState::Error(err.to_string()));
                             }
                         }
+                    }
+                    MsgFromKotlin::SignedMessage(message) => {
+                        log::info!("{:?}", message);
                     }
                 }
             }

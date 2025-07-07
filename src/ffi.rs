@@ -88,7 +88,7 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendSignedTransaction(
     let tx_str: String = match env.get_string(&signedTransaction) {
         Ok(s) => s.into(),
         Err(e) => {
-            log::error!("Failed to get public key string from JNI: {:?}", e);
+            log::error!("Failed to get transaction string from JNI: {:?}", e);
             return;
         }
     };
@@ -97,6 +97,28 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendSignedTransaction(
         tx_str
     );
     let msg = MsgFromKotlin::SignedTransaction(tx_str);
+    crate::send_msg_from_ffi(msg);
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_sendSignedMessage(
+    mut env: JNIEnv,
+    _class: JClass,
+    signedMessage: JString,
+) {
+    let msg_str: String = match env.get_string(&signedMessage) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get message string from JNI: {:?}", e);
+            return;
+        }
+    };
+    log::info!(
+        "Received signed message from Kotlin, sending to channel: {}",
+        msg_str
+    );
+    let msg = MsgFromKotlin::SignedMessage(msg_str);
     crate::send_msg_from_ffi(msg);
 }
 
@@ -221,14 +243,41 @@ fn do_sign_transaction(
     Ok(rust_string)
 }
 
-/* ---------- Safe Rust API for the rest of the app ---------- */
+// Helper function to call Kotlin's DioxusUtils.signMessage
+fn do_sign_message(
+    env: &mut JNIEnv,
+    activity_jobject: jobject,
+    message: &[u8],
+) -> jni::errors::Result<String> {
+    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
+    const METHOD_NAME: &str = "signMessage";
+    // JNI signature for: static String signTransaction(androidx.activity.ComponentActivity activity, byte[] transaction)
+    const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;[B)Ljava/lang/String;";
 
-// /// Safely retrieves the public key that was sent from the Kotlin layer.
-// pub fn get_public_key() -> Option<String> {
-//     // Lock the mutex and clone the value.
-//     // The lock is released automatically when the guard from `lock()` is dropped.
-//     PUBLIC_KEY.lock().unwrap().clone()
-// }
+    // Find the class
+    let class = env.find_class(CLASS_NAME)?;
+
+    // Convert raw jobject to JObject
+    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+
+    // Convert rust byte slice to java byte array
+    let message_jbyte_array = env.byte_array_from_slice(message)?;
+
+    // Prepare arguments
+    let message_jobject: JObject = message_jbyte_array.into();
+    let jvalue_args = [JValue::from(&activity_obj), JValue::from(&message_jobject)];
+
+    // Call static method
+    let result_jvalue = env.call_static_method(class, METHOD_NAME, METHOD_SIG, &jvalue_args)?;
+
+    // Process result
+    let jstring_obj = result_jvalue.l()?;
+    let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
+
+    Ok(rust_string)
+}
+
+/* ---------- Safe Rust API for the rest of the app ---------- */
 
 pub fn call_kotlin_get_string() -> String {
     with_env(|env| match get_hardcoded_string(env) {
@@ -240,7 +289,6 @@ pub fn call_kotlin_get_string() -> String {
     })
 }
 
-// New function callable from Dioxus to initiate MWA session
 pub fn initiate_mwa_session_from_dioxus() -> String {
     // Get the globally stored WryActivity GlobalRef
     let activity_global_ref = match WRY_ACTIVITY.get() {
@@ -252,7 +300,6 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
         }
     };
 
-    // Use with_env to get a JNIEnv for the current thread
     with_env(|env| {
         // Get a JObject (local reference) from the GlobalRef.
         // This local reference is valid only for the duration of this JNIEnv (inside this closure).
@@ -276,9 +323,9 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
     })
 }
 
-// New function callable from Dioxus to initiate MWA signing
-// NOTE: This function must be invoked from the main dioxus thread,
-// that means we cannot call this function from inside a dioxus::spawn
+/// Function callable from Dioxus to initiate MWA transaction signing
+/// NOTE: This function must be invoked from the main dioxus thread,
+/// that means we cannot call this function from inside a dioxus::spawn
 pub fn initiate_sign_transaction_from_dioxus(transaction: &[u8]) -> String {
     let activity_global_ref = match WRY_ACTIVITY.get() {
         Some(glob_ref) => glob_ref,
@@ -301,6 +348,33 @@ pub fn initiate_sign_transaction_from_dioxus(transaction: &[u8]) -> String {
                     e
                 );
                 format!("JNI call to signTransaction failed: {:?}", e)
+            }
+        }
+    })
+}
+
+/// Function callable from Dioxus to initiate MWA message signing
+/// NOTE: This function must be invoked from the main dioxus thread,
+/// that means we cannot call this function from inside a dioxus::spawn
+pub fn initiate_sign_message_from_dioxus(message: &[u8]) -> String {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. MWA message signing cannot be initiated. Ensure WryActivity.create() has been called.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+
+    with_env(|env| {
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
+
+        match do_sign_message(env, raw_activity_jobject, message) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("JNI error in initiate_sign_message_from_dioxus: {:?}", e);
+                format!("JNI call to signMessage failed: {:?}", e)
             }
         }
     })
