@@ -35,23 +35,14 @@ where
 /// ```
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
-    env: JNIEnv,
-    _class: JClass, // JClass representing dev.dioxus.main.Ipc
-) {
+pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(env: JNIEnv, _class: JClass) {
     match env.get_java_vm() {
         Ok(vm) => {
             // Store it once; ignores subsequent calls if already set.
             JVM.set(vm).ok();
         }
         Err(e) => {
-            // It's crucial to handle this error, perhaps by logging or panicking,
-            // as the application cannot function correctly without the JVM pointer.
-            // For now, let's use a log, assuming a logger is set up.
-            // If no logger, this will be a silent failure in release builds.
             eprintln!("JNI: failed to get JavaVM pointer in cacheVm: {:?}", e);
-            // Consider panicking in debug builds or a more robust error handling strategy.
-            // panic!("JNI: failed to get JavaVM pointer in cacheVm: {:?}", e);
         }
     }
 }
@@ -60,7 +51,7 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_cacheVm(
 #[allow(non_snake_case)]
 pub extern "system" fn Java_dev_dioxus_main_Ipc_sendPublicKey(
     mut env: JNIEnv,
-    _class: JClass, // JClass representing dev.dioxus.main.Ipc
+    _class: JClass,
     publicKey: JString,
 ) {
     let pub_key_str: String = match env.get_string(&publicKey) {
@@ -126,18 +117,12 @@ pub extern "system" fn Java_dev_dioxus_main_Ipc_sendSignedMessage(
 #[allow(non_snake_case)]
 pub extern "system" fn Java_dev_dioxus_main_WryActivity_cacheActivityInstance(
     env: JNIEnv,
-    // In Kotlin: `create(this)` is called on a WryActivity instance.
-    // `external fun create(activity: WryActivity)`
-    // So, `thiz_activity_obj` is the WryActivity instance on which `create` is invoked.
-    // And `activity_arg_obj` is also that same WryActivity instance, passed as the argument.
     _thiz_activity_obj: JObject,
     activity_arg_obj: JObject,
 ) {
     match env.new_global_ref(activity_arg_obj) {
         Ok(global_ref) => {
             if WRY_ACTIVITY.set(global_ref).is_err() {
-                // This case means WRY_ACTIVITY was already set. The new global_ref passed to set()
-                // is returned in the Err variant and will be dropped, automatically deleting the JNI ref.
                 eprintln!("JNI: WRY_ACTIVITY global ref was already set. New ref dropped.");
             }
         }
@@ -149,23 +134,6 @@ pub extern "system" fn Java_dev_dioxus_main_WryActivity_cacheActivityInstance(
 
 /* ---------- Rust helpers ---------- */
 
-/// Call Kotlin’s `DioxusUtils#getHardcodedString(): String`
-fn get_hardcoded_string(env: &mut JNIEnv) -> jni::errors::Result<String> {
-    // Takes &mut JNIEnv
-    const CLASS: &str = "dev/dioxus/main/DioxusUtils";
-    const METHOD: &str = "getHardcodedString";
-    const SIG: &str = "()Ljava/lang/String;";
-
-    // Find the class
-    let class = env.find_class(CLASS)?;
-    // Call the static method
-    let jstr = env.call_static_method(class, METHOD, SIG, &[])?.l()?;
-    // Convert the JString to a Rust String
-    Ok(env.get_string(&JString::from(jstr))?.into())
-}
-
-// Helper function to call Kotlin's DioxusUtils.establishMwaSession
-// This function performs the actual JNI call.
 fn do_establish_mwa_session(
     env: &mut JNIEnv,
     activity_jobject: jobject,
@@ -196,17 +164,14 @@ fn do_establish_mwa_session(
     )?;
 
     // The result_jvalue is a JValue. We need to convert it to a JObject (which represents the Java String).
-    // .l() attempts this conversion, returning a Result<JObject, Error>.
     let jstring_obj = result_jvalue.l()?;
 
     // Convert the JString JObject into a Rust String.
-    // JString::from(jstring_obj) casts the JObject to JString.
     let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
 
     Ok(rust_string)
 }
 
-// Helper function to call Kotlin's DioxusUtils.signTransaction
 fn do_sign_transaction(
     env: &mut JNIEnv,
     activity_jobject: jobject,
@@ -243,7 +208,6 @@ fn do_sign_transaction(
     Ok(rust_string)
 }
 
-// Helper function to call Kotlin's DioxusUtils.signMessage
 fn do_sign_message(
     env: &mut JNIEnv,
     activity_jobject: jobject,
@@ -251,7 +215,7 @@ fn do_sign_message(
 ) -> jni::errors::Result<String> {
     const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
     const METHOD_NAME: &str = "signMessage";
-    // JNI signature for: static String signTransaction(androidx.activity.ComponentActivity activity, byte[] transaction)
+    // JNI signature for: static String signTransaction(androidx.activity.ComponentActivity activity, byte[] message)
     const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;[B)Ljava/lang/String;";
 
     // Find the class
@@ -279,18 +243,7 @@ fn do_sign_message(
 
 /* ---------- Safe Rust API for the rest of the app ---------- */
 
-pub fn call_kotlin_get_string() -> String {
-    with_env(|env| match get_hardcoded_string(env) {
-        Ok(s) => s,
-        Err(e) => {
-            log::error!("JNI error: {:?}", e);
-            String::from("JNI error")
-        }
-    })
-}
-
 pub fn initiate_mwa_session_from_dioxus() -> String {
-    // Get the globally stored WryActivity GlobalRef
     let activity_global_ref = match WRY_ACTIVITY.get() {
         Some(glob_ref) => glob_ref,
         None => {
@@ -299,17 +252,9 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
             return String::from(err_msg);
         }
     };
-
     with_env(|env| {
-        // Get a JObject (local reference) from the GlobalRef.
-        // This local reference is valid only for the duration of this JNIEnv (inside this closure).
         let activity_jobject_local_ref = activity_global_ref.as_obj();
-
-        // Convert the JObject (local ref) to a raw jobject, which is what
-        // our `do_establish_mwa_session` helper expects.
         let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
-
-        // Now call the helper function that actually performs the JNI call to Kotlin
         match do_establish_mwa_session(env, raw_activity_jobject) {
             Ok(s) => s,
             Err(e) => {
@@ -335,11 +280,9 @@ pub fn initiate_sign_transaction_from_dioxus(transaction: &[u8]) -> String {
             return String::from(err_msg);
         }
     };
-
     with_env(|env| {
         let activity_jobject_local_ref = activity_global_ref.as_obj();
         let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
-
         match do_sign_transaction(env, raw_activity_jobject, transaction) {
             Ok(s) => s,
             Err(e) => {
@@ -365,11 +308,9 @@ pub fn initiate_sign_message_from_dioxus(message: &[u8]) -> String {
             return String::from(err_msg);
         }
     };
-
     with_env(|env| {
         let activity_jobject_local_ref = activity_global_ref.as_obj();
         let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
-
         match do_sign_message(env, raw_activity_jobject, message) {
             Ok(s) => s,
             Err(e) => {
