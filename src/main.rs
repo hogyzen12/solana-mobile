@@ -9,6 +9,7 @@ use once_cell::sync::OnceCell;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey,
+    signature::Signature,
     transaction::{Transaction, VersionedTransaction},
 };
 
@@ -55,13 +56,24 @@ const HEADER_SVG: Asset = asset!("/assets/header.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 #[derive(Debug, Clone)]
-pub struct WalletState(Pubkey);
+pub enum WalletState {
+    None,
+    Pubkey(Pubkey),
+}
 
 #[derive(Debug, Clone)]
 pub enum TransactionState {
     None,
     WaitingForSignature,
     Signed(VersionedTransaction),
+    Error(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum MessageState {
+    None,
+    WaitingForSignature(String),
+    Signed(String, Vec<u8>),
     Error(String),
 }
 
@@ -76,11 +88,13 @@ fn main() {
 #[component]
 fn App() -> Element {
     // init wallet state
-    let mut wallet_state = use_signal(|| WalletState(Pubkey::default()));
+    let mut wallet_state = use_signal(|| WalletState::None);
     use_context_provider(|| wallet_state);
     // init transaction sender state
     let mut transaction_state = use_signal(|| TransactionState::None);
     use_context_provider(|| transaction_state);
+    // init message sender state
+    let mut message_state = use_signal(|| MessageState::None);
     // listen for messages from kotlin
     use_future(move || async move {
         if let Some(rx) = RX.get().cloned() {
@@ -88,7 +102,7 @@ fn App() -> Element {
                 match msg {
                     MsgFromKotlin::Pubkey(base58) => {
                         if let Ok(pubkey) = Pubkey::from_str(base58.as_str()) {
-                            wallet_state.set(WalletState(pubkey));
+                            wallet_state.set(WalletState::Pubkey(pubkey));
                         }
                     }
                     MsgFromKotlin::SignedTransaction(base58) => {
@@ -119,8 +133,21 @@ fn App() -> Element {
                             }
                         }
                     }
-                    MsgFromKotlin::SignedMessage(message) => {
-                        log::info!("{:?}", message);
+                    MsgFromKotlin::SignedMessage(signature) => {
+                        if let MessageState::WaitingForSignature(message) = message_state.cloned() {
+                            let res: Result<()> = (|| -> Result<_> {
+                                let bytes = bs58::decode(signature.as_str()).into_vec()?;
+                                let bytes: [u8; 64] = bytes.try_into().map_err(|_| {
+                                    anyhow::anyhow!("could not parse vec as byte array")
+                                })?;
+                                let sig = Signature::from(bytes);
+
+                                Ok(())
+                            })();
+                        } else {
+                            message_state
+                                .set(MessageState::Error("no message available".to_string()));
+                        }
                     }
                 }
             }
@@ -141,26 +168,33 @@ pub fn Hero() -> Element {
     let mut transaction_state = use_context::<Signal<TransactionState>>();
     let transaction: Resource<Result<VersionedTransaction>> = use_resource(move || async move {
         let pubkey = wallet_state.cloned();
-        let ix = solana_sdk::system_instruction::transfer(&pubkey.0, &pubkey.0, 1_000);
-        let mut tx = Transaction::new_with_payer(&[ix], Some(&pubkey.0));
-        let client = RpcClient::new(RPC_URL.to_string());
-        let hash = client.get_latest_blockhash().await?;
-        tx.message.recent_blockhash = hash;
-        let tx: VersionedTransaction = tx.into();
-        Ok(tx)
+        if let WalletState::Pubkey(pubkey) = pubkey {
+            let ix = solana_sdk::system_instruction::transfer(&pubkey, &pubkey, 1_000);
+            let mut tx = Transaction::new_with_payer(&[ix], Some(&pubkey));
+            let client = RpcClient::new(RPC_URL.to_string());
+            let hash = client.get_latest_blockhash().await?;
+            tx.message.recent_blockhash = hash;
+            let tx: VersionedTransaction = tx.into();
+            Ok(tx)
+        } else {
+            Err(anyhow::anyhow!("wallet disconnected"))
+        }
     });
     rsx! {
-        div { id: "hero",
-            img { src: HEADER_SVG, id: "header" }
-            button {
-                onclick: move |_| {
-                    let string = crate::ffi::initiate_mwa_session_from_dioxus();
-                    log::debug!("session string: {:?}", string);
-                },
-                "proof"
+        if let WalletState::Pubkey(pubkey) = wallet_state.cloned() {
+            div { "{pubkey}" }
+        } else {
+            div { id: "hero",
+                img { src: HEADER_SVG, id: "header" }
+                button {
+                    onclick: move |_| {
+                        let string = crate::ffi::initiate_mwa_session_from_dioxus();
+                        log::debug!("session string: {:?}", string);
+                    },
+                    "connect wallet"
+                }
             }
         }
-        div { "{wallet_state.cloned().0}" }
         div {
             button {
                 onclick: move |_| {
