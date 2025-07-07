@@ -49,6 +49,19 @@ sh scripts/android.update.sh
 ```
 
 
+## Continuous Integration
+
+This project uses GitHub Actions for Continuous Integration (CI). The workflow is defined in the `.github/workflows/android-build.yml` file.
+
+The CI runner automates the following key steps:
+- **Sets up the environment**: It installs the correct versions of Java, the Android SDK, and the Android NDK.
+- **Installs Rust**: It sets up the specific nightly toolchain required for the project.
+- **Builds Dependencies**: It compiles required dependencies, such as OpenSSL, for the Android target.
+- **Builds the App**: It uses or fork of the Dioxus CLI to compile the Rust code and build the Android application.
+- **Bundles the App**: It generates the Android App Bundle (AAB) for release.
+- **Uploads Artifacts**: The final AAB is uploaded as a build artifact, making it available for download and testing.
+
+This CI build is intended to provide an environment from scratch than can be used to build and bundle an app that is ready to be published to the Solana app store. For actually publishing your bundled app, follow the [official guide](https://docs.solanamobile.com/dapp-publishing/overview).
 
 ## Linker Version Script (`empty.version`)
 
@@ -57,7 +70,6 @@ The `empty.version` file is a linker version script used during the Android buil
 The script `VERS_1 { global: *; };` ensures that all global symbols from the Rust code are exported. This is crucial for the Java Native Interface (JNI) to find and call the necessary Rust functions from the Kotlin/Java side of the Android application.
 
 Without this file, the linker might default to hiding all symbols, which would lead to an `UnsatisfiedLinkError` at runtime and cause the app to crash.
-
 
 
 ## Serving Your App
