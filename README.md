@@ -6,11 +6,15 @@ We have forked the `dioxus-cli` and `wry` (the underlying web-view library from 
 
 ## Setup
 
-Before you can build this project, you must install the forked `dioxus-cli`. You'll need to clone our fork of the dioxus repo.
+Before you can build this project, you must install a custom `dioxus-cli`. You'll need to fork our `dioxus` repository, update it with your own app config, and then install the CLI from source.
 
-- Dioxus: https://github.com/regolith-labs/dioxus
+- Fork this repository: https://github.com/regolith-labs/dioxus
 
-Clone the forked `dioxus` repository, navigate to the `packages/cli` directory, and run the following command:
+In your fork, edit the following lines in `packages/cli/assets/android/DioxusUtils.kt.hbs` to set your own application name, icon, and identity URI:
+
+https://github.com/regolith-labs/dioxus/blob/main/packages/cli/assets/android/DioxusUtils.kt.hbs#L24-L32
+
+After customizing the file, clone your fork locally, navigate to the `packages/cli` directory, and run the following command to install:
 
 ```bash
 cargo install --path . --locked
