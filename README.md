@@ -20,6 +20,14 @@ After customizing the file, clone your fork locally, navigate to the `packages/c
 cargo install --path . --locked
 ```
 
+Once the CLI is installed from your fork, you must also update this project's `Cargo.toml` to point to that same fork. This ensures that when you build the application, it uses the code from your customized version of Dioxus, including your app-specific configurations.
+
+In `Cargo.toml`, update the `dioxus` dependency with the URL of your repository:
+```toml
+[dependencies]
+dioxus = { git = "https://github.com/YOUR_GITHUB_USERNAME/dioxus", branch = "main", features = ["router"] }
+```
+
 ## Android Build Scripts
 
 This project uses a set of scripts to build, bundle, and update the Android application. These scripts are located in the `scripts/` directory and should be run from the root of the project.
