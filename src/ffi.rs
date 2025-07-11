@@ -132,6 +132,84 @@ pub extern "system" fn Java_dev_dioxus_main_WryActivity_cacheActivityInstance(
     }
 }
 
+// Add these USB-related JNI functions after your existing ones
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_sendUsbDeviceList(
+    mut env: JNIEnv,
+    _class: JClass,
+    device_list: JString,
+) {
+    let devices_str: String = match env.get_string(&device_list) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get USB device list from JNI: {:?}", e);
+            return;
+        }
+    };
+    log::info!("Received USB device list from Kotlin: {}", devices_str);
+    let msg = MsgFromKotlin::UsbDeviceList(devices_str);
+    crate::send_msg_from_ffi(msg);
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_sendUsbPermissionResult(
+    mut env: JNIEnv,
+    _class: JClass,
+    result: JString,
+) {
+    let result_str: String = match env.get_string(&result) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get USB permission result from JNI: {:?}", e);
+            return;
+        }
+    };
+    log::info!("Received USB permission result from Kotlin: {}", result_str);
+    let msg = MsgFromKotlin::UsbPermissionResult(result_str);
+    crate::send_msg_from_ffi(msg);
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_dev_dioxus_main_Ipc_sendUsbOperationResult(
+    mut env: JNIEnv,
+    _class: JClass,
+    operation: JString,
+    result: JString,
+) {
+    let operation_str: String = match env.get_string(&operation) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get USB operation from JNI: {:?}", e);
+            return;
+        }
+    };
+    
+    let result_str: String = match env.get_string(&result) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            log::error!("Failed to get USB operation result from JNI: {:?}", e);
+            return;
+        }
+    };
+    
+    log::info!("Received USB operation result from Kotlin: {} -> {}", operation_str, result_str);
+    
+    // Send appropriate message based on operation type
+    let msg = match operation_str.as_str() {
+        "open" => MsgFromKotlin::UsbDeviceOpened(result_str),
+        "close" => MsgFromKotlin::UsbDeviceClosed(result_str),
+        "write" => MsgFromKotlin::UsbDataWritten(result_str),
+        "read" => MsgFromKotlin::UsbDataRead(result_str),
+        _ => MsgFromKotlin::UsbError(format!("Unknown operation: {} -> {}", operation_str, result_str)),
+    };
+    
+    crate::send_msg_from_ffi(msg);
+}
+
 /* ---------- Rust helpers ---------- */
 
 fn do_establish_mwa_session(
@@ -241,6 +319,107 @@ fn do_sign_message(
     Ok(rust_string)
 }
 
+// USB helper functions - add these after your existing helper functions
+
+fn do_get_usb_devices(
+    env: &mut JNIEnv,
+    activity_jobject: jobject,
+) -> jni::errors::Result<String> {
+    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
+    const METHOD_NAME: &str = "getConnectedUsbDevices";
+    const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;)Ljava/lang/String;";
+
+    let class = env.find_class(CLASS_NAME)?;
+    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let jvalue_args = [JValue::from(&activity_obj)];
+
+    let result_jvalue = env.call_static_method(class, METHOD_NAME, METHOD_SIG, &jvalue_args)?;
+    let jstring_obj = result_jvalue.l()?;
+    let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
+
+    Ok(rust_string)
+}
+
+fn do_request_usb_permission(
+    env: &mut JNIEnv,
+    activity_jobject: jobject,
+    device_name: &str,
+) -> jni::errors::Result<String> {
+    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
+    const METHOD_NAME: &str = "requestUsbPermission";
+    const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;Ljava/lang/String;)Ljava/lang/String;";
+
+    let class = env.find_class(CLASS_NAME)?;
+    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let device_name_jstring = env.new_string(device_name)?;
+    
+    let jvalue_args = [
+        JValue::from(&activity_obj),
+        JValue::from(&device_name_jstring),
+    ];
+
+    let result_jvalue = env.call_static_method(class, METHOD_NAME, METHOD_SIG, &jvalue_args)?;
+    let jstring_obj = result_jvalue.l()?;
+    let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
+
+    Ok(rust_string)
+}
+
+fn do_open_usb_device(
+    env: &mut JNIEnv,
+    activity_jobject: jobject,
+    device_name: &str,
+) -> jni::errors::Result<String> {
+    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
+    const METHOD_NAME: &str = "openUsbDevice";
+    const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;Ljava/lang/String;)Ljava/lang/String;";
+
+    let class = env.find_class(CLASS_NAME)?;
+    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let device_name_jstring = env.new_string(device_name)?;
+    
+    let jvalue_args = [
+        JValue::from(&activity_obj),
+        JValue::from(&device_name_jstring),
+    ];
+
+    let result_jvalue = env.call_static_method(class, METHOD_NAME, METHOD_SIG, &jvalue_args)?;
+    let jstring_obj = result_jvalue.l()?;
+    let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
+
+    Ok(rust_string)
+}
+
+fn do_write_usb_data(
+    env: &mut JNIEnv,
+    activity_jobject: jobject,
+    device_name: &str,
+    data: &[u8],
+) -> jni::errors::Result<String> {
+    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
+    const METHOD_NAME: &str = "writeUsbData";
+    const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;Ljava/lang/String;[B)Ljava/lang/String;";
+
+    let class = env.find_class(CLASS_NAME)?;
+    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let device_name_jstring = env.new_string(device_name)?;
+    let data_jbyte_array = env.byte_array_from_slice(data)?;
+    
+    // Fix: Create a longer-lived binding for the JObject
+    let data_jobject = JObject::from(data_jbyte_array);
+    let jvalue_args = [
+        JValue::from(&activity_obj),
+        JValue::from(&device_name_jstring),
+        JValue::from(&data_jobject),
+    ];
+
+    let result_jvalue = env.call_static_method(class, METHOD_NAME, METHOD_SIG, &jvalue_args)?;
+    let jstring_obj = result_jvalue.l()?;
+    let rust_string: String = env.get_string(&JString::from(jstring_obj))?.into();
+
+    Ok(rust_string)
+}
+
 /* ---------- Safe Rust API for the rest of the app ---------- */
 
 pub fn initiate_mwa_session_from_dioxus() -> String {
@@ -316,6 +495,100 @@ pub fn initiate_sign_message_from_dioxus(message: &[u8]) -> String {
             Err(e) => {
                 log::error!("JNI error in initiate_sign_message_from_dioxus: {:?}", e);
                 format!("JNI call to signMessage failed: {:?}", e)
+            }
+        }
+    })
+}
+
+// Public USB API functions - add these after your existing public functions
+
+pub fn get_usb_devices_from_dioxus() -> String {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. USB scan cannot be initiated.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+    
+    with_env(|env| {
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
+        match do_get_usb_devices(env, raw_activity_jobject) {
+            Ok(devices) => devices,
+            Err(e) => {
+                log::error!("JNI error in get_usb_devices_from_dioxus: {:?}", e);
+                format!("JNI call to getConnectedUsbDevices failed: {:?}", e)
+            }
+        }
+    })
+}
+
+pub fn request_usb_permission_from_dioxus(device_name: &str) -> String {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. USB permission cannot be requested.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+    
+    with_env(|env| {
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
+        match do_request_usb_permission(env, raw_activity_jobject, device_name) {
+            Ok(result) => result,
+            Err(e) => {
+                log::error!("JNI error in request_usb_permission_from_dioxus: {:?}", e);
+                format!("JNI call to requestUsbPermission failed: {:?}", e)
+            }
+        }
+    })
+}
+
+pub fn open_usb_device_from_dioxus(device_name: &str) -> String {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. USB device cannot be opened.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+    
+    with_env(|env| {
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
+        match do_open_usb_device(env, raw_activity_jobject, device_name) {
+            Ok(result) => result,
+            Err(e) => {
+                log::error!("JNI error in open_usb_device_from_dioxus: {:?}", e);
+                format!("JNI call to openUsbDevice failed: {:?}", e)
+            }
+        }
+    })
+}
+
+pub fn write_usb_data_from_dioxus(device_name: &str, data: &[u8]) -> String {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            let err_msg = "Error: WryActivity reference not available. USB data cannot be written.";
+            log::error!("{}", err_msg);
+            return String::from(err_msg);
+        }
+    };
+    
+    with_env(|env| {
+        let activity_jobject_local_ref = activity_global_ref.as_obj();
+        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
+        match do_write_usb_data(env, raw_activity_jobject, device_name, data) {
+            Ok(result) => result,
+            Err(e) => {
+                log::error!("JNI error in write_usb_data_from_dioxus: {:?}", e);
+                format!("JNI call to writeUsbData failed: {:?}", e)
             }
         }
     })

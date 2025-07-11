@@ -3653,6 +3653,7 @@ dependencies = [
  "log",
  "once_cell",
  "openssl",
+ "serde_json",
  "solana-client",
  "solana-sdk",
  "tokio",
