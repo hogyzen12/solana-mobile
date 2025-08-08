@@ -320,3 +320,8 @@ pub fn initiate_sign_message_from_dioxus(message: &[u8]) -> String {
         }
     })
 }
+
+// Add this function to ffi.rs
+pub fn is_activity_available() -> bool {
+    WRY_ACTIVITY.get().is_some()
+}

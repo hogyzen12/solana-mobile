@@ -1,4 +1,4 @@
-// src/signing/mod.rs - Updated to include MWA signer
+// src/signing/mod.rs - Fixed to remove MWA references
 use crate::wallet::Wallet;
 use std::error::Error;
 use async_trait::async_trait;
@@ -8,10 +8,6 @@ pub mod hardware;
 
 use software::SoftwareSigner;
 use hardware::HardwareSigner;
-
-// Import MWA signer for Android only
-#[cfg(target_os = "android")]
-use crate::mwa::MwaSigner;
 
 /// Trait for different transaction signing methods
 #[async_trait]
@@ -34,8 +30,7 @@ pub trait TransactionSigner: Send + Sync {
 pub enum SignerType {
     Software(SoftwareSigner),
     Hardware(HardwareSigner),
-    #[cfg(target_os = "android")]
-    Mwa(MwaSigner),
+    // Note: MWA signing will be handled directly via FFI calls, not through this trait system
 }
 
 impl SignerType {
@@ -50,19 +45,11 @@ impl SignerType {
         Ok(SignerType::Hardware(signer))
     }
     
-    /// Create an MWA signer (Android only)
-    #[cfg(target_os = "android")]
-    pub fn mwa(mwa_signer: MwaSigner) -> Self {
-        SignerType::Mwa(mwa_signer)
-    }
-    
     /// Get a user-friendly description of the signer type
     pub fn get_type_name(&self) -> &'static str {
         match self {
             SignerType::Software(_) => "Software Wallet",
             SignerType::Hardware(_) => "Hardware Wallet",
-            #[cfg(target_os = "android")]
-            SignerType::Mwa(_) => "Mobile Wallet Adapter",
         }
     }
 }
@@ -73,8 +60,6 @@ impl TransactionSigner for SignerType {
         match self {
             SignerType::Software(s) => s.get_public_key().await,
             SignerType::Hardware(h) => h.get_public_key().await,
-            #[cfg(target_os = "android")]
-            SignerType::Mwa(m) => m.get_public_key().await,
         }
     }
     
@@ -82,8 +67,6 @@ impl TransactionSigner for SignerType {
         match self {
             SignerType::Software(s) => s.sign_message(message).await,
             SignerType::Hardware(h) => h.sign_message(message).await,
-            #[cfg(target_os = "android")]
-            SignerType::Mwa(m) => m.sign_message(message).await,
         }
     }
     
@@ -91,8 +74,6 @@ impl TransactionSigner for SignerType {
         match self {
             SignerType::Software(s) => s.get_name(),
             SignerType::Hardware(h) => h.get_name(),
-            #[cfg(target_os = "android")]
-            SignerType::Mwa(m) => m.get_name(),
         }
     }
     
@@ -100,8 +81,6 @@ impl TransactionSigner for SignerType {
         match self {
             SignerType::Software(s) => s.is_available().await,
             SignerType::Hardware(h) => h.is_available().await,
-            #[cfg(target_os = "android")]
-            SignerType::Mwa(m) => m.is_available().await,
         }
     }
 }

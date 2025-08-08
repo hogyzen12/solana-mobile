@@ -43,9 +43,7 @@ use std::collections::HashSet;
 use rand::{thread_rng, Rng};
 
 #[cfg(target_os = "android")]
-use crate::mwa::{MwaWallet, MwaSigner, MwaState};
-#[cfg(target_os = "android")]
-use crate::signing::{SignerType, TransactionSigner};
+use crate::WalletState;  // Import the simple WalletState from main.rs
 
 // Define the assets for icons
 const ICON_32: Asset = asset!("/assets/icons/32x32.png");
@@ -276,9 +274,7 @@ pub fn WalletView() -> Element {
 
     // MWA state management for Android
     #[cfg(target_os = "android")]
-    let mwa_wallet = use_context::<Signal<MwaWallet>>();
-    #[cfg(target_os = "android")]
-    let mut mwa_state = use_signal(|| MwaState::Disconnected);
+    let mut mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     fn get_token_price_change(
         symbol: &str, 
@@ -333,18 +329,6 @@ pub fn WalletView() -> Element {
                 }
                 
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-        });
-    });
-
-    // Monitor MWA state for Android
-    #[cfg(target_os = "android")]
-    use_effect(move || {
-        spawn(async move {
-            loop {
-                let current_state = mwa_wallet.read().get_state().await;
-                mwa_state.set(current_state);
-                tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
             }
         });
     });
@@ -660,7 +644,7 @@ pub fn WalletView() -> Element {
                             classes.push_str(" hardware-connected");
                         }
                         #[cfg(target_os = "android")]
-                        if matches!(mwa_state.read().clone(), MwaState::Connected(_)) {
+                        if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
                             classes.push_str(" mwa-connected");
                         }
                         classes
@@ -693,9 +677,8 @@ pub fn WalletView() -> Element {
                             class: {
                                 #[cfg(target_os = "android")]
                                 {
-                                    match mwa_state.read().clone() {
-                                        MwaState::Connected(_) => "mwa-indicator connected",
-                                        MwaState::WaitingForSignature { .. } => "mwa-indicator waiting",
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(_) => "mwa-indicator connected",
                                         _ => "mwa-indicator disconnected"
                                     }
                                 }
@@ -707,9 +690,8 @@ pub fn WalletView() -> Element {
                             title: {
                                 #[cfg(target_os = "android")]
                                 {
-                                    match mwa_state.read().clone() {
-                                        MwaState::Connected(_) => "MWA Connected",
-                                        MwaState::WaitingForSignature { .. } => "MWA Signing...",
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(_) => "MWA Connected",
                                         _ => "MWA Disconnected"
                                     }
                                 }
@@ -1409,6 +1391,39 @@ pub fn WalletView() -> Element {
                             "Stake"
                         }
                     }
+                    // ADD THIS MWA BUTTON (only on Android):
+                    if cfg!(target_os = "android") {
+                        button {
+                            class: "action-button",
+                            onclick: move |_| {
+                                // EXACT pattern from original_main.rs - simple and direct!
+                                log::info!("🔄 MWA Connect button clicked");
+                                let result = crate::ffi::initiate_mwa_session_from_dioxus();
+                                log::info!("📱 MWA result: {}", result);
+                            },
+                            div {
+                                class: "action-icon",
+                                div {
+                                    style: "font-size: 24px; display: flex; align-items: center; justify-content: center;",
+                                    // Show connection status
+                                    if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+                                        "✅" // Connected
+                                    } else {
+                                        "🔗" // Disconnected
+                                    }
+                                }
+                            }
+                            span {
+                                class: "action-label",
+                                // Show connection status in label
+                                if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+                                    "MWA ✓"
+                                } else {
+                                    "Connect MWA"
+                                }
+                            }
+                        }
+                    }
                     button {
                         class: "action-button",
                         onclick: move |_| {
@@ -1637,161 +1652,6 @@ pub fn WalletView() -> Element {
                                 div {
                                     class: "token-amount",
                                     "{format_token_amount(token.balance, &token.symbol)}"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ADD THE MWA SECTION HERE (inside the main rsx! block):
-            // MWA Section (only show on Android)
-            if cfg!(target_os = "android") {
-                div { 
-                    class: "mwa-section",
-                    style: "margin: 20px 16px 16px 16px; padding: 16px; background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);",
-                    
-                    // MWA Header
-                    div { 
-                        style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;",
-                        h3 { 
-                            style: "color: white; font-size: 16px; font-weight: 600; margin: 0;",
-                            "📱 Mobile Wallet Adapter" 
-                        }
-                        div {
-                            style: {
-                                #[cfg(target_os = "android")]
-                                {
-                                    let (color, text) = match mwa_state.read().clone() {
-                                        MwaState::Connected(_) => ("#10B981", "Connected"),
-                                        MwaState::WaitingForSignature { .. } => ("#F59E0B", "Signing..."),
-                                        _ => ("#EF4444", "Disconnected")
-                                    };
-                                    format!("color: {}; font-size: 12px; font-weight: 500;", color)
-                                }
-                                #[cfg(not(target_os = "android"))]
-                                {
-                                    "color: #6B7280; font-size: 12px; font-weight: 500;".to_string()
-                                }
-                            },
-                            {
-                                #[cfg(target_os = "android")]
-                                {
-                                    match mwa_state.read().clone() {
-                                        MwaState::Connected(_) => "Connected",
-                                        MwaState::WaitingForSignature { .. } => "Signing...",
-                                        _ => "Disconnected"
-                                    }
-                                }
-                                #[cfg(not(target_os = "android"))]
-                                {
-                                    "Not Available"
-                                }
-                            }
-                        }
-                    }
-                    
-                    // MWA Content based on state
-                    {
-                        #[cfg(target_os = "android")]
-                        {
-                            match mwa_state.read().clone() {
-                                MwaState::Disconnected => rsx! {
-                                    div { style: "text-align: center;",
-                                        p { 
-                                            style: "color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 16px; margin-top: 0;",
-                                            "Connect your wallet to dApps using Mobile Wallet Adapter"
-                                        }
-                                        button { 
-                                            style: "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; width: 100%;",
-                                            onclick: move |_| {
-                                                spawn(async move {
-                                                    let wallet = &*mwa_wallet.read();
-                                                    if let Err(e) = wallet.connect().await {
-                                                        log::error!("Failed to connect MWA: {}", e);
-                                                    }
-                                                });
-                                            },
-                                            "🔗 Connect via MWA"
-                                        }
-                                    }
-                                },
-                                MwaState::Connected(pubkey) => rsx! {
-                                    div {
-                                        // Connected pubkey display
-                                        div { 
-                                            style: "background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px;",
-                                            p { 
-                                                style: "color: #10B981; font-size: 12px; font-weight: 500; margin: 0 0 4px 0;",
-                                                "Connected Address:"
-                                            }
-                                            p { 
-                                                style: "color: white; font-family: monospace; font-size: 11px; word-break: break-all; margin: 0;",
-                                                "{pubkey}"
-                                            }
-                                        }
-                                        
-                                        // Action buttons
-                                        div { 
-                                            style: "display: grid; grid-template-columns: 1fr 1fr; gap: 8px;",
-                                            
-                                            button {
-                                                style: "background: rgba(139, 92, 246, 0.8); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;",
-                                                onclick: move |_| {
-                                                    spawn(async move {
-                                                        let wallet = &*mwa_wallet.read();
-                                                        let test_message = b"Hello from Unruggable Wallet!";
-                                                        
-                                                        match wallet.sign_message(test_message).await {
-                                                            Ok(signature) => {
-                                                                log::info!("✅ MWA message signed: {} bytes", signature.len());
-                                                            }
-                                                            Err(e) => {
-                                                                log::error!("❌ MWA signing failed: {}", e);
-                                                            }
-                                                        }
-                                                    });
-                                                },
-                                                "✍️ Test Sign"
-                                            }
-                                            
-                                            button {
-                                                style: "background: rgba(239, 68, 68, 0.8); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;",
-                                                onclick: move |_| {
-                                                    spawn(async move {
-                                                        let wallet = &*mwa_wallet.read();
-                                                        wallet.disconnect().await;
-                                                    });
-                                                },
-                                                "🔌 Disconnect"
-                                            }
-                                        }
-                                    }
-                                },
-                                MwaState::WaitingForSignature { .. } => rsx! {
-                                    div { 
-                                        style: "text-align: center; padding: 20px;",
-                                        div { 
-                                            style: "color: #F59E0B; font-size: 16px; margin-bottom: 8px;",
-                                            "⏳"
-                                        }
-                                        p { 
-                                            style: "color: rgba(255,255,255,0.9); font-size: 14px; margin: 0;",
-                                            "Waiting for signature approval..."
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        #[cfg(not(target_os = "android"))]
-                        {
-                            rsx! {
-                                div { 
-                                    style: "text-align: center; padding: 20px;",
-                                    p { 
-                                        style: "color: rgba(255,255,255,0.6); font-size: 14px; margin: 0;",
-                                        "Mobile Wallet Adapter is only available on Android"
-                                    }
                                 }
                             }
                         }

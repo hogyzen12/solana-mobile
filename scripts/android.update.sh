@@ -60,3 +60,12 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Installation complete! Your app is now updated on your device."
+
+echo "Starting log monitoring..."
+echo "Logs will be saved to android_logs.txt"
+
+# Clear previous logs
+adb logcat -c
+
+# Start monitoring and save to file
+adb logcat | grep -i "mwa\|rust\|dioxus\|wallet" | tee android_logs.txt

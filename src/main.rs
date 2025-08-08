@@ -1,4 +1,4 @@
-// Replace your current main.rs with this corrected version:
+// Updated main.rs - Following the simplified pattern from original_main.rs
 
 use dioxus::prelude::*;
 
@@ -18,8 +18,6 @@ mod currency_utils;
 // Add MWA modules for Android only
 #[cfg(target_os = "android")]
 pub mod ffi;
-#[cfg(target_os = "android")]
-pub mod mwa;
 
 use components::*;
 
@@ -27,17 +25,11 @@ use components::*;
 #[cfg(target_os = "android")]
 use std::str::FromStr;
 #[cfg(target_os = "android")]
-use anyhow::Result;
-#[cfg(target_os = "android")]
 use async_channel::{unbounded, Receiver, Sender};
 #[cfg(target_os = "android")]
 use once_cell::sync::OnceCell;
 #[cfg(target_os = "android")]
-use solana_sdk::{
-    pubkey::Pubkey,
-    signature::Signature,
-    transaction::{Transaction, VersionedTransaction},
-};
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -60,6 +52,14 @@ pub enum MsgFromKotlin {
 static TX: OnceCell<Sender<MsgFromKotlin>> = OnceCell::new();
 #[cfg(target_os = "android")]
 static RX: OnceCell<Receiver<MsgFromKotlin>> = OnceCell::new();
+
+// Simple MWA state enum (following original_main.rs pattern)
+#[cfg(target_os = "android")]
+#[derive(Debug, Clone)]
+pub enum WalletState {
+    None,
+    Pubkey(Pubkey),
+}
 
 /// Initialize channels (Android only)
 #[cfg(target_os = "android")]
@@ -93,33 +93,31 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    // Initialize MWA state management on Android
+    // Simple MWA state management (Android only) - Following original_main.rs pattern
     #[cfg(target_os = "android")]
     {
-        use crate::mwa::MwaWallet;
+        // Create simple wallet state (no complex MwaWallet struct)
+        let mut mwa_wallet_state = use_signal(|| WalletState::None);
+        use_context_provider(|| mwa_wallet_state);
         
-        // Create and provide global MWA wallet instance
-        let mut mwa_wallet = use_signal(|| MwaWallet::new());
-        use_context_provider(|| mwa_wallet);
-        
-        // Listen for MWA messages from Kotlin
+        // Listen for MWA messages from Kotlin (EXACT pattern from original_main.rs)
         use_future(move || async move {
             if let Some(rx) = RX.get().cloned() {
                 while let Ok(msg) = rx.recv().await {
                     match msg {
                         MsgFromKotlin::Pubkey(base58) => {
-                            if let Ok(pubkey) = Pubkey::from_str(&base58) {
-                                log::info!("MWA: Connected with pubkey: {}", pubkey);
-                                mwa_wallet.write().set_connected(pubkey).await;
+                            if let Ok(pubkey) = Pubkey::from_str(base58.as_str()) {
+                                log::info!("🔗 MWA Connected with pubkey: {}", pubkey);
+                                mwa_wallet_state.set(WalletState::Pubkey(pubkey));
                             }
                         }
                         MsgFromKotlin::SignedTransaction(base64_tx) => {
-                            log::info!("MWA: Received signed transaction");
-                            mwa_wallet.write().handle_signed_transaction(base64_tx).await;
+                            log::info!("📝 MWA: Received signed transaction: {}", base64_tx);
+                            // Handle signed transaction here if needed
                         }
                         MsgFromKotlin::SignedMessage(signature) => {
-                            log::info!("MWA: Received signed message");
-                            mwa_wallet.write().handle_signed_message(signature).await;
+                            log::info!("✍️ MWA: Received signed message: {}", signature);
+                            // Handle signed message here if needed
                         }
                     }
                 }
