@@ -1535,10 +1535,15 @@ pub fn WalletView() -> Element {
                             onclick: move |_| {
                                 // Only show disconnect option when we have a confirmed connected pubkey
                                 if let WalletState::Pubkey(_) = mwa_wallet_state() {
-                                    // TODO: Implement MWA disconnect logic here
-                                    log::info!("🔌 MWA Disconnect button clicked (not implemented yet)");
+                                    // Reset MWA state to None
+                                    mwa_wallet_state.set(WalletState::None);
+                                    
+                                    // Switch to default wallet
+                                    current_wallet_index.set(0);
+                                    
+                                    log::info!("🔄 Disconnected from MWA, switched to default wallet");
                                 } else {
-                                    // Always default to connect behavior
+                                    // Connect logic (unchanged)
                                     log::info!("🔄 MWA Connect button clicked");
                                     let result = crate::ffi::initiate_mwa_session_from_dioxus();
                                     log::info!("📱 MWA result: {}", result);
