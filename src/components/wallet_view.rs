@@ -347,6 +347,99 @@ pub fn WalletView() -> Element {
         });
     });
 
+    // MWA Integration Effect - Bridge MWA state with existing wallet management
+    #[cfg(target_os = "android")]
+    use_effect(move || {
+        let mwa_state = mwa_wallet_state();
+        
+        // Static tracker to prevent infinite loops
+        static LAST_MWA_STATE: std::sync::OnceLock<std::sync::Mutex<Option<String>>> = std::sync::OnceLock::new();
+        let last_state = LAST_MWA_STATE.get_or_init(|| std::sync::Mutex::new(None));
+        
+        // Convert current state to string for comparison
+        let current_state_str = match &mwa_state {
+            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+            WalletState::None => None,
+        };
+        
+        // Check if state actually changed
+        {
+            let mut last = last_state.lock().unwrap();
+            if *last == current_state_str {
+                // State hasn't changed, skip processing
+                return;
+            }
+            *last = current_state_str.clone();
+        }
+        
+        // Add async spawn to prevent blocking and add debouncing
+        spawn(async move {
+            // Add debouncing delay
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            
+            match mwa_state {
+                WalletState::Pubkey(pubkey) => {
+                    log::info!("🔗 MWA Connected - Setting as active wallet: {}", pubkey);
+                    
+                    // Create a temporary WalletInfo for the MWA wallet
+                    let mwa_wallet_info = crate::wallet::WalletInfo {
+                        name: "MWA Wallet".to_string(),
+                        address: pubkey.to_string(),
+                        encrypted_key: "".to_string(),
+                    };
+                    
+                    // Check if MWA wallet already exists in the list
+                    let mut wallets_list = wallets.read().clone();
+                    let mwa_index = wallets_list.iter().position(|w| w.name == "MWA Wallet");
+                    
+                    if let Some(index) = mwa_index {
+                        // Only update if the address actually changed
+                        if wallets_list[index].address != pubkey.to_string() {
+                            wallets_list[index] = mwa_wallet_info;
+                            wallets.set(wallets_list);
+                        }
+                        current_wallet_index.set(index);
+                    } else {
+                        // Add new MWA wallet and set as active
+                        wallets_list.push(mwa_wallet_info);
+                        let mwa_index = wallets_list.len() - 1;
+                        wallets.set(wallets_list);
+                        current_wallet_index.set(mwa_index);
+                    }
+                    
+                    // Disconnect hardware wallet when MWA connects
+                    hardware_connected.set(false);
+                    hardware_pubkey.set(None);
+                    hardware_wallet.set(None);
+                },
+                WalletState::None => {
+                    log::info!("🔗 MWA Disconnected - Cleaning up");
+                    
+                    // When MWA disconnects, remove the MWA wallet from the list
+                    let mut wallets_list = wallets.read().clone();
+                    if let Some(mwa_index) = wallets_list.iter().position(|w| w.name == "MWA Wallet") {
+                        // Store values we need before modifying the list
+                        let current_index = current_wallet_index();
+                        let was_using_mwa = current_index == mwa_index;
+                        let list_length_after_remove = wallets_list.len() - 1;
+                        
+                        // Remove the MWA wallet
+                        wallets_list.remove(mwa_index);
+                        wallets.set(wallets_list);
+                        
+                        // Update current index if needed
+                        if was_using_mwa && list_length_after_remove > 0 {
+                            current_wallet_index.set(0);
+                        } else if current_index > mwa_index {
+                            // Adjust index since we removed an item before current index
+                            current_wallet_index.set(current_index - 1);
+                        }
+                    }
+                }
+            }
+        });
+    });
+
     
     async fn fetch_historical_changes(
         token_prices: Signal<HashMap<String, f64>>,
@@ -391,6 +484,7 @@ pub fn WalletView() -> Element {
         let hw_connected = hardware_connected();
         let hw_pubkey = hardware_pubkey();
         
+        // Determine the primary address to fetch for
         let address = if hw_connected && hw_pubkey.is_some() {
             hw_pubkey.clone().unwrap()
         } else if let Some(wallet) = wallets_list.get(index) {
@@ -399,33 +493,48 @@ pub fn WalletView() -> Element {
             return;
         };
         
+        // Override with MWA address if connected (Android only)
+        #[cfg(target_os = "android")]
+        let final_address = {
+            if let WalletState::Pubkey(mwa_pubkey) = mwa_wallet_state() {
+                mwa_pubkey.to_string()
+            } else {
+                address
+            }
+        };
+        
+        #[cfg(not(target_os = "android"))]
+        let final_address = address;
+        
         let rpc_url = custom_rpc();
         let token_prices_snapshot = token_prices.read().clone();
         
         // Clone verified_tokens for use in the async closure
         let verified_tokens_clone = verified_tokens.clone();
         
+        // Log for debugging
+        log::info!("🔄 Fetching balance for address: {}", final_address);
+        
         spawn(async move {
             // Fetch SOL balance
-            match rpc::get_balance(&address, rpc_url.as_deref()).await {
+            match rpc::get_balance(&final_address, rpc_url.as_deref()).await {
                 Ok(sol_balance) => {
                     balance.set(sol_balance);
-                    println!("Fetched SOL balance: {} SOL for address: {}", sol_balance, address);
+                    log::info!("✅ Fetched SOL balance: {} SOL for address: {}", sol_balance, final_address);
                 }
                 Err(e) => {
-                    println!("Failed to fetch balance for address {}: {}", address, e);
+                    log::error!("❌ Failed to fetch balance for address {}: {}", final_address, e);
                     balance.set(0.0);
                 }
             }
-            
             
             // Fetch token accounts
             let filter = Some(rpc::TokenAccountFilter::ProgramId(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string()
             ));
-            match rpc::get_token_accounts_by_owner(&address, filter, rpc_url.as_deref()).await {
+            match rpc::get_token_accounts_by_owner(&final_address, filter, rpc_url.as_deref()).await {
                 Ok(token_accounts) => {
-                    println!("Raw token accounts for address {}: {:?}", address, token_accounts);
+                    log::info!("📄 Raw token accounts for address {}: {} accounts", final_address, token_accounts.len());
                     
                     // Access the HashMap inside the Memo using read()
                     let verified_tokens_map = verified_tokens_clone.read();
@@ -433,7 +542,6 @@ pub fn WalletView() -> Element {
                     // Get snapshots of current prices and historical changes
                     let token_prices_snapshot = token_prices_snapshot.clone();
                     let token_changes_snapshot = token_changes.read().clone();
-                    println!("PRICE DEBUG: token_changes_snapshot in token creation: {:#?}", token_changes_snapshot);
                     
                     // Filter token accounts
                     let filtered_accounts: Vec<_> = token_accounts
@@ -441,18 +549,11 @@ pub fn WalletView() -> Element {
                         .filter(|account| {
                             let is_non_zero = account.amount > 0.0;
                             let is_verified = verified_tokens_map.contains_key(&account.mint);
-                            println!(
-                                "Token {}: amount={}, is_verified={}, will_include={}",
-                                account.mint,
-                                account.amount,
-                                is_verified,
-                                is_non_zero && is_verified
-                            );
                             is_non_zero && is_verified
                         })
                         .collect();
                     
-                    println!("Filtered token accounts: {:?}", filtered_accounts);
+                    log::info!("✅ Filtered to {} verified token accounts", filtered_accounts.len());
                     
                     let new_tokens = filtered_accounts
                         .into_iter()
@@ -470,24 +571,9 @@ pub fn WalletView() -> Element {
                                     }
                                 });
                             
-                                let symbol = metadata.symbol.as_str();
-                                println!("PRICE DEBUG: Looking up price change for {}", symbol);
-                                println!("PRICE DEBUG: token_changes_snapshot keys: {:?}", token_changes_snapshot.keys().collect::<Vec<_>>());
-                                let price_change = get_token_price_change(symbol, &token_changes_snapshot);
-                                println!("PRICE DEBUG: Got price change for {}: {}", symbol, price_change);
-                                
-                                // Use this price_change variable here
-                                let value_usd = account.amount * price;
-                                let icon_type = match metadata.symbol.as_str() {
-                                    "USDC" => ICON_USDC.to_string(),
-                                    "USDT" => ICON_USDT.to_string(),
-                                    "JTO" => ICON_JTO.to_string(),
-                                    "JUP" => ICON_JUP.to_string(),
-                                    "JLP" => ICON_JLP.to_string(),
-                                    "BONK" => ICON_BONK.to_string(),
-                                    _ => ICON_32.to_string(),
-                                };
-                                
+                            let symbol = metadata.symbol.as_str();
+                            let price_change = get_token_price_change(symbol, &token_changes_snapshot);
+                            
                             let value_usd = account.amount * price;
                             let icon_type = match metadata.symbol.as_str() {
                                 "USDC" => ICON_USDC.to_string(),
@@ -512,8 +598,6 @@ pub fn WalletView() -> Element {
                         })
                         .collect::<Vec<Token>>();
                     
-                    println!("Processed tokens for address {}: {:?}", address, new_tokens);
-                    
                     // Get the most recent SOL price
                     let current_sol_price = token_prices_snapshot.get("SOL").copied().unwrap_or(sol_price());
                     
@@ -532,17 +616,19 @@ pub fn WalletView() -> Element {
                     }];
                     all_tokens.extend(new_tokens);
                     
+                    // Store the length before moving the vector
+                    let tokens_count = all_tokens.len();
                     tokens.set(all_tokens);
+                    log::info!("✅ Updated tokens list with {} total tokens", tokens_count);
                 }
                 Err(e) => {
-                    println!("Failed to fetch token accounts for address {}: {}", address, e);
+                    log::error!("❌ Failed to fetch token accounts for address {}: {}", final_address, e);
                     
                     // Get the most recent SOL price
                     let current_sol_price = token_prices_snapshot.get("SOL").copied().unwrap_or(sol_price());
                     
-                    // Get SOL percentage change from historical data (if available)
-                    let token_changes_snapshot = token_changes.read().clone();
                     // Get SOL percentage change from historical data
+                    let token_changes_snapshot = token_changes.read().clone();
                     let sol_price_change = get_token_price_change("SOL", &token_changes_snapshot);
                     
                     tokens.set(vec![Token {
@@ -572,8 +658,14 @@ pub fn WalletView() -> Element {
 
     let current_wallet = wallets.read().get(current_wallet_index()).cloned();
     
-    // Get full address for display
-    let full_address = if hardware_connected() && hardware_pubkey().is_some() {
+    // Get full address for display - prioritize MWA, then hardware, then local wallet
+    let full_address = if cfg!(target_os = "android") && matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+        if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+            pubkey.to_string()
+        } else {
+            "No Wallet".to_string()
+        }
+    } else if hardware_connected() && hardware_pubkey().is_some() {
         hardware_pubkey().unwrap()
     } else if let Some(wallet) = current_wallet.as_ref() {
         wallet.address.clone()
@@ -581,8 +673,19 @@ pub fn WalletView() -> Element {
         "No Wallet".to_string()
     };
 
-    // Truncated address for dropdown
-    let wallet_address = if hardware_connected() && hardware_pubkey().is_some() {
+    // Truncated address for dropdown - prioritize MWA, then hardware, then local wallet
+    let wallet_address = if cfg!(target_os = "android") && matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+        if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+            let addr = pubkey.to_string();
+            if addr.len() >= 8 {
+                format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
+            } else {
+                addr
+            }
+        } else {
+            "No wallet".to_string()
+        }
+    } else if hardware_connected() && hardware_pubkey().is_some() {
         let addr = hardware_pubkey().unwrap();
         if addr.len() >= 8 {
             format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
@@ -709,7 +812,9 @@ pub fn WalletView() -> Element {
                     class: "header-address-section",
                     div {
                         class: "header-address-label",
-                        if hardware_connected() && hardware_pubkey().is_some() {
+                        if cfg!(target_os = "android") && matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+                            "MWA Wallet"
+                        } else if hardware_connected() && hardware_pubkey().is_some() {
                             "Hardware Wallet"
                         } else if current_wallet.is_some() {
                             "Wallet"
@@ -825,6 +930,38 @@ pub fn WalletView() -> Element {
                                                 None => "Connecting...".to_string()
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+
+                        // MWA Wallet display (Android only)
+                        if cfg!(target_os = "android") {
+                            if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+                                div {
+                                    class: "dropdown-item mwa-wallet-item active",
+                                    div {
+                                        class: "dropdown-icon mwa-icon",
+                                        "📱"
+                                    }
+                                    div {
+                                        class: "wallet-info",
+                                        div { class: "wallet-name", "MWA Wallet" }
+                                        div { 
+                                            class: "wallet-address",
+                                            {
+                                                let addr = pubkey.to_string();
+                                                if addr.len() >= 8 {
+                                                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
+                                                } else {
+                                                    addr
+                                                }
+                                            }
+                                        }
+                                    }
+                                    div {
+                                        class: "mwa-status-indicator",
+                                        "✅"
                                     }
                                 }
                             }
