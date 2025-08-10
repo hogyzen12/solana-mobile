@@ -1528,35 +1528,39 @@ pub fn WalletView() -> Element {
                             "Stake"
                         }
                     }
-                    // ADD THIS MWA BUTTON (only on Android):
+                    // MWA BUTTON (only on Android):
                     if cfg!(target_os = "android") {
                         button {
                             class: "action-button",
                             onclick: move |_| {
-                                // EXACT pattern from original_main.rs - simple and direct!
-                                log::info!("🔄 MWA Connect button clicked");
-                                let result = crate::ffi::initiate_mwa_session_from_dioxus();
-                                log::info!("📱 MWA result: {}", result);
+                                // Only show disconnect option when we have a confirmed connected pubkey
+                                if let WalletState::Pubkey(_) = mwa_wallet_state() {
+                                    // TODO: Implement MWA disconnect logic here
+                                    log::info!("🔌 MWA Disconnect button clicked (not implemented yet)");
+                                } else {
+                                    // Always default to connect behavior
+                                    log::info!("🔄 MWA Connect button clicked");
+                                    let result = crate::ffi::initiate_mwa_session_from_dioxus();
+                                    log::info!("📱 MWA result: {}", result);
+                                }
                             },
                             div {
                                 class: "action-icon",
                                 div {
                                     style: "font-size: 24px; display: flex; align-items: center; justify-content: center;",
-                                    // Show connection status
-                                    if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
-                                        "✅" // Connected
-                                    } else {
-                                        "🔗" // Disconnected
+                                    // Only show disconnect icon when we have a confirmed pubkey
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(_) => "🔌", // Disconnect icon only when truly connected
+                                        _ => "🔗" // Connect icon for all other states
                                     }
                                 }
                             }
                             span {
                                 class: "action-label",
-                                // Show connection status in label
-                                if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
-                                    "MWA ✓"
-                                } else {
-                                    "Connect MWA"
+                                // Only show disconnect text when we have a confirmed pubkey
+                                match mwa_wallet_state() {
+                                    WalletState::Pubkey(_) => "Disconnect MWA", // Disconnect only when truly connected
+                                    _ => "Connect MWA" // Connect for all other states
                                 }
                             }
                         }
