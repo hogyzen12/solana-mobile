@@ -60,6 +60,7 @@ const ICON_RECEIVE: Asset = asset!("/assets/icons/receive.svg");
 const ICON_SEND: Asset = asset!("/assets/icons/send.svg");
 const ICON_STAKE: Asset = asset!("/assets/icons/stake.svg");
 const ICON_BULK: Asset = asset!("/assets/icons/bulk.svg");
+const ICON_MWA: Asset = asset!("/assets/icons/MWA.png");
 
 // JupiterToken struct with PartialEq and Eq for use_memo
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -762,46 +763,61 @@ pub fn WalletView() -> Element {
                         src: ICON_32,
                         alt: "Profile"
                     }
-                    div {
-                        class: {
-                            let indicator_class = if hardware_connected() { 
-                                "hardware-indicator connected" 
-                            } else if hardware_device_present() { 
-                                "hardware-indicator present" 
-                            } else {
-                                "hardware-indicator default"
-                            };
-                            indicator_class.to_string()
-                        }
-                    }
-                    // MWA indicator (only show on Android)
+                    
+                    // MWA indicator with icon (only show on Android) - clickable
                     if cfg!(target_os = "android") {
                         div {
                             class: {
                                 #[cfg(target_os = "android")]
                                 {
                                     match mwa_wallet_state() {
-                                        WalletState::Pubkey(_) => "mwa-indicator connected",
-                                        _ => "mwa-indicator disconnected"
+                                        WalletState::Pubkey(_) => "mwa-indicator-icon connected",
+                                        _ => "mwa-indicator-icon present"
                                     }
                                 }
                                 #[cfg(not(target_os = "android"))]
                                 {
-                                    "mwa-indicator disconnected"
+                                    "mwa-indicator-icon disconnected"
                                 }
                             },
                             title: {
                                 #[cfg(target_os = "android")]
                                 {
                                     match mwa_wallet_state() {
-                                        WalletState::Pubkey(_) => "MWA Connected",
-                                        _ => "MWA Disconnected"
+                                        WalletState::Pubkey(_) => "MWA Connected - Click to Disconnect",
+                                        _ => "MWA Available - Click to Connect"
                                     }
                                 }
                                 #[cfg(not(target_os = "android"))]
                                 {
                                     "MWA Not Available"
                                 }
+                            },
+                            onclick: move |e| {
+                                e.stop_propagation();
+                                #[cfg(target_os = "android")]
+                                {
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(_) => {
+                                            // If connected, disconnect (switch to default wallet)
+                                            mwa_wallet_state.set(WalletState::None);
+                                            current_wallet_index.set(0);
+                                            log::info!("🔄 Disconnected from MWA via logo click, switched to default wallet");
+                                        },
+                                        _ => {
+                                            // If not connected, initiate connection
+                                            log::info!("🔄 MWA Connect logo clicked");
+                                            let result = crate::ffi::initiate_mwa_session_from_dioxus();
+                                            log::info!("📱 MWA result: {}", result);
+                                        }
+                                    }
+                                }
+                            },
+                            img {
+                                src: ICON_MWA,
+                                alt: "MWA",
+                                width: "18",
+                                height: "18",
                             }
                         }
                     }

@@ -4096,3 +4096,119 @@ body:has(.token-item-selected) .token-item:hover {
         transform: scale(1.1);
     }
 }
+/* Updated MWA Indicator - Icon-based, prominent position, clickable */
+.mwa-indicator-icon {
+    position: absolute;
+    bottom: -2px;
+    right: -8px; /* Moved further left to stick out more prominently */
+    width: 20px;
+    height: 20px;
+    border-radius: 6px; /* Slightly more rounding for larger size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 11;
+    transition: all 0.3s ease;
+    cursor: pointer; /* Indicate it's clickable */
+}
+
+.mwa-indicator-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: all 0.3s ease;
+}
+
+/* MWA Connected State - bright and visible */
+.mwa-indicator-icon.connected {
+    background-color: rgba(16, 185, 129, 0.2);
+    border: 1px solid #10B981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.mwa-indicator-icon.connected img {
+    filter: brightness(1.2) saturate(1.3);
+}
+
+/* MWA Present/Available State - intermediate visibility with subtle animation */
+.mwa-indicator-icon.present {
+    background-color: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    animation: mwa-pulse 2s ease-in-out infinite;
+}
+
+.mwa-indicator-icon.present img {
+    filter: brightness(1.1) sepia(0.3) hue-rotate(30deg);
+    opacity: 0.9;
+}
+
+/* MWA Disconnected/Not Available State - muted */
+.mwa-indicator-icon.disconnected {
+    background-color: rgba(107, 114, 128, 0.1);
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.mwa-indicator-icon.disconnected img {
+    filter: grayscale(0.8) brightness(0.7);
+    opacity: 0.6;
+}
+
+/* Pulse animation for "present" state */
+@keyframes mwa-pulse {
+    0%, 100% {
+        box-shadow: 0 0 3px rgba(251, 191, 36, 0.3);
+        border-color: rgba(251, 191, 36, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+        border-color: rgba(251, 191, 36, 0.8);
+    }
+}
+
+/* Remove/disable hardware indicator styles since we're not using it */
+/*
+.hardware-indicator {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    bottom: -2px;
+    right: -2px;
+    border: 2px solid #0f0f0f;
+    transition: background-color 0.3s ease;
+    z-index: 10;
+}
+*/
+
+/* Profile icon hover effects for MWA - enhanced for clickability */
+.profile-icon:hover .mwa-indicator-icon.present {
+    transform: scale(1.15); /* Slightly bigger scale for better feedback */
+    animation: none; /* Stop pulsing on hover */
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.9);
+}
+
+.profile-icon:hover .mwa-indicator-icon.connected {
+    transform: scale(1.15);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.9);
+}
+
+/* Active/click state for better feedback */
+.mwa-indicator-icon:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+}
+
+/* Additional hover effects specifically for the MWA indicator */
+.mwa-indicator-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 480px) {
+    .mwa-indicator-icon {
+        width: 18px;
+        height: 18px;
+        bottom: -1px;
+        right: -6px; /* Maintain the prominent left positioning on mobile */
+    }
+}
