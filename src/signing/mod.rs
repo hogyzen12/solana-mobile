@@ -1,4 +1,4 @@
-// src/signing/mod.rs - Fixed to remove MWA references
+// src/signing/mod.rs
 use crate::wallet::Wallet;
 use std::error::Error;
 use async_trait::async_trait;
@@ -30,7 +30,6 @@ pub trait TransactionSigner: Send + Sync {
 pub enum SignerType {
     Software(SoftwareSigner),
     Hardware(HardwareSigner),
-    // Note: MWA signing will be handled directly via FFI calls, not through this trait system
 }
 
 impl SignerType {
@@ -43,14 +42,6 @@ impl SignerType {
     pub async fn hardware() -> Result<Self, Box<dyn Error>> {
         let signer = HardwareSigner::new().await?;
         Ok(SignerType::Hardware(signer))
-    }
-    
-    /// Get a user-friendly description of the signer type
-    pub fn get_type_name(&self) -> &'static str {
-        match self {
-            SignerType::Software(_) => "Software Wallet",
-            SignerType::Hardware(_) => "Hardware Wallet",
-        }
     }
 }
 

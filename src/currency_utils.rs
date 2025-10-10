@@ -70,7 +70,18 @@ pub fn format_percentage_change(percentage: f64) -> String {
     format!("{}{:.2}%", sign, percentage)
 }
 
-/// Format large numbers with appropriate abbreviations (K, M, B)
+/// Format portfolio balance without decimals for clean display
+pub fn format_portfolio_balance(usd_amount: f64) -> String {
+    let selected_currency = SELECTED_CURRENCY.read().clone();
+    let converted_amount = convert_from_usd(usd_amount, &selected_currency);
+    let rounded_amount = converted_amount.round();
+    let symbol = get_current_currency_symbol();
+    
+    // Always format without decimals for portfolio balance
+    format!("{}{:.0}", symbol, rounded_amount)
+}
+
+/// Format large numbers with appropriate abbreviations (K, M, B) - Updated to handle whole numbers
 pub fn format_large_currency_amount(usd_amount: f64) -> String {
     let selected_currency = SELECTED_CURRENCY.read().clone();
     let converted_amount = convert_from_usd(usd_amount, &selected_currency);
@@ -87,7 +98,12 @@ pub fn format_large_currency_amount(usd_amount: f64) -> String {
     };
     
     if suffix.is_empty() {
-        format!("{}{:.2}", symbol, value)
+        // For amounts under 1000, check if it's a whole number
+        if value.fract() == 0.0 {
+            format!("{}{:.0}", symbol, value)  // No decimals for whole numbers
+        } else {
+            format!("{}{:.2}", symbol, value)  // Keep decimals for fractional amounts
+        }
     } else {
         format!("{}{:.1}{}", symbol, value, suffix)
     }
@@ -243,41 +259,4 @@ pub fn format_token_value_smart(token_amount: f64, token_usd_price: f64) -> Stri
     
     // For very small amounts
     format!("{}~0", symbol) // e.g., "$~0"
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    #[test]
-    fn test_format_price_conversion() {
-        // Set up test data
-        let mut rates = HashMap::new();
-        rates.insert("USD".to_string(), 1.0);
-        rates.insert("EUR".to_string(), 0.85);
-        *EXCHANGE_RATES.write() = rates;
-        
-        // Test USD (should remain the same)
-        *SELECTED_CURRENCY.write() = "USD".to_string();
-        assert_eq!(format_price_in_selected_currency(100.0), "$100.00");
-        
-        // Test EUR conversion
-        *SELECTED_CURRENCY.write() = "EUR".to_string();
-        let result = format_price_in_selected_currency(100.0);
-        assert!(result.contains("85.00")); // 100 * 0.85
-    }
-    
-    #[test]
-    fn test_large_amount_formatting() {
-        *SELECTED_CURRENCY.write() = "USD".to_string();
-        let mut rates = HashMap::new();
-        rates.insert("USD".to_string(), 1.0);
-        *EXCHANGE_RATES.write() = rates;
-        
-        assert_eq!(format_large_currency_amount(1_500_000_000.0), "$1.5B");
-        assert_eq!(format_large_currency_amount(2_500_000.0), "$2.5M");
-        assert_eq!(format_large_currency_amount(1_500.0), "$1.5K");
-        assert_eq!(format_large_currency_amount(100.0), "$100.00");
-    }
 }

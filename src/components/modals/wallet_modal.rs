@@ -9,6 +9,7 @@ pub fn WalletModal(mode: String, onclose: EventHandler<()>, onsave: EventHandler
     let mut show_generated_key = use_signal(|| false);
     let mut generated_wallet = use_signal(|| None as Option<Wallet>);
     let mut error_message = use_signal(|| None as Option<String>);
+    let mut show_format_help = use_signal(|| false);
     
     rsx! {
         div {
@@ -111,20 +112,42 @@ pub fn WalletModal(mode: String, onclose: EventHandler<()>, onsave: EventHandler
                     }
                     div {
                         class: "wallet-field",
-                        label { "Private Key:" }
+                        label { 
+                            "Private Key:"
+                            button {
+                                class: "help-button",
+                                onclick: move |_| show_format_help.set(!show_format_help()),
+                                "ℹ️"
+                            }
+                        }
                         textarea {
                             value: "{import_key}",
                             oninput: move |e| import_key.set(e.value()),
-                            placeholder: "Enter your base58 encoded private key or Solana keypair"
+                            placeholder: "Enter your private key in bs58 or json",
+                            rows: "4"
                         }
-                        div {
-                            class: "help-text",
-                            "Supports both 32-byte private keys and 64-byte Solana keypairs"
+                        
+                        // Format help section
+                        if show_format_help() {
+                            div {
+                                class: "format-help",
+                                h4 { "Supported Formats:" }
+                                div { class: "format-example",
+                                    strong { "1. Base58 (Solana standard):" }
+                                    code { "5Jxyz...abc123" }
+                                }
+                                div { class: "format-example",
+                                    strong { "2. JSON Array (Phantom/Sollet):" }
+                                    code { "[252,183,12,...,159,189]" }
+                                }
+                            }
                         }
                     }
                 }
                 
-                div { class: "modal-buttons",
+                // Buttons section
+                div { 
+                    class: "modal-buttons",
                     button {
                         class: "modal-button cancel",
                         onclick: move |_| onclose.call(()),
@@ -174,7 +197,10 @@ pub fn WalletModal(mode: String, onclose: EventHandler<()>, onsave: EventHandler
                             onclick: move |_| {
                                 if !import_key().is_empty() {
                                     match import_wallet_from_key(&import_key(), wallet_name()) {
-                                        Ok(wallet_info) => onsave.call(wallet_info),
+                                        Ok(wallet_info) => {
+                                            error_message.set(None);
+                                            onsave.call(wallet_info);
+                                        },
                                         Err(e) => {
                                             error_message.set(Some(e));
                                         }

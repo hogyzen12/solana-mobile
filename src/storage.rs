@@ -125,7 +125,6 @@ fn get_storage_dir() -> String {
     }
 }
 
-// Simplified storage directory function
 fn get_storage_dir_simple() -> String {
     #[cfg(target_os = "android")]
     {
@@ -136,12 +135,81 @@ fn get_storage_dir_simple() -> String {
             "/data/data/com.unruggable/files".to_string() // Hardcoded fallback
         }
     }
-    #[cfg(not(target_os = "android"))]
+    #[cfg(target_os = "ios")]
+    {
+        // Use iOS Application Support directory (better than Documents for app data)
+        if let Some(home) = std::env::var_os("HOME") {
+            let app_support = std::path::PathBuf::from(home)
+                .join("Library")
+                .join("Application Support")
+                .join("WalletData");
+            
+            let app_support_str = app_support.to_string_lossy().to_string();
+            log::info!("🍎 Using iOS Application Support: {}", app_support_str);
+            app_support_str
+        } else {
+            log::warn!("⚠️ iOS HOME not found, using fallback");
+            "./WalletData".to_string()
+        }
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let home_dir = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .unwrap_or_else(|_| ".".to_string());
         format!("{home_dir}/.solana_wallet_app")
+    }
+}
+
+// Add iOS-specific initialization function (add this new function)
+#[cfg(target_os = "ios")]
+pub fn init_ios_storage() -> Result<(), String> {
+    log::info!("🍎 Initializing iOS storage...");
+    
+    // Log environment info for debugging
+    if let Some(home) = std::env::var_os("HOME") {
+        log::info!("📱 iOS HOME: {}", home.to_string_lossy());
+    } else {
+        log::warn!("⚠️ iOS HOME environment variable not found");
+    }
+    
+    // Get and create storage directory
+    let storage_dir = get_storage_dir_simple();
+    log::info!("📁 iOS storage directory: {}", storage_dir);
+    
+    // Ensure directory exists
+    match ensure_storage_dir() {
+        Ok(_) => {
+            log::info!("✅ iOS storage directory ready");
+            
+            // Test read/write capabilities
+            let test_file = format!("{}/ios_test.txt", storage_dir);
+            match std::fs::write(&test_file, "iOS storage test") {
+                Ok(_) => {
+                    log::info!("✅ iOS write test successful");
+                    
+                    // Verify we can read it back
+                    match std::fs::read_to_string(&test_file) {
+                        Ok(content) => {
+                            if content == "iOS storage test" {
+                                log::info!("✅ iOS read-write verification successful");
+                                let _ = std::fs::remove_file(&test_file); // cleanup
+                                Ok(())
+                            } else {
+                                Err("iOS read-write verification failed".to_string())
+                            }
+                        }
+                        Err(e) => Err(format!("iOS read test failed: {}", e))
+                    }
+                }
+                Err(e) => {
+                    Err(format!("iOS write test failed: {}", e))
+                }
+            }
+        }
+        Err(e) => {
+            Err(format!("iOS storage directory creation failed: {}", e))
+        }
     }
 }
 
@@ -285,6 +353,14 @@ pub fn save_wallet_to_storage(wallet_info: &WalletInfo) {
 pub fn load_wallets_from_storage() -> Vec<WalletInfo> {
     log::info!("🔄 Attempting to load wallets from storage");
     
+    // iOS-specific initialization
+    #[cfg(target_os = "ios")]
+    {
+        if let Err(e) = init_ios_storage() {
+            log::error!("❌ iOS storage init failed: {}", e);
+        }
+    }
+    
     #[cfg(feature = "web")]
     {
         use wasm_bindgen::JsCast;
@@ -301,11 +377,29 @@ pub fn load_wallets_from_storage() -> Vec<WalletInfo> {
     #[cfg(not(feature = "web"))]
     {
         let wallet_file = get_wallets_file_path();
-        log::info!("📁 Loading from file: {}", wallet_file);
+        log::info!("📁 Looking for wallets at: {}", wallet_file);
+        
+        // Ensure storage directory exists
+        if let Err(e) = ensure_storage_dir() {
+            log::error!("❌ Storage directory error: {}", e);
+            return Vec::new();
+        }
         
         // Check if file exists
         if !Path::new(&wallet_file).exists() {
-            log::info!("ℹ️ Wallet file doesn't exist yet: {}", wallet_file);
+            log::info!("ℹ️ No existing wallet file found at: {}", wallet_file);
+            
+            // Debug: List directory contents
+            let storage_dir = get_storage_dir_simple();
+            if let Ok(entries) = std::fs::read_dir(&storage_dir) {
+                log::info!("📂 Directory contents of {}:", storage_dir);
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        log::info!("  - {}", entry.file_name().to_string_lossy());
+                    }
+                }
+            }
+            
             return Vec::new();
         }
         
@@ -316,13 +410,13 @@ pub fn load_wallets_from_storage() -> Vec<WalletInfo> {
                     Ok(wallets) => {
                         log::info!("✅ Successfully loaded {} wallets", wallets.len());
                         for (i, wallet) in wallets.iter().enumerate() {
-                            log::info!("  Wallet {}: {}", i + 1, wallet.name);
+                            log::info!("  Wallet {}: {} ({}...)", i + 1, wallet.name, &wallet.address[..8]);
                         }
                         wallets
                     }
                     Err(e) => {
                         log::error!("❌ Failed to parse wallets from {}: {}", wallet_file, e);
-                        log::error!("📄 File contents: {}", data);
+                        log::error!("📄 File contents preview: {}", &data.chars().take(200).collect::<String>());
                         Vec::new()
                     }
                 }
@@ -338,9 +432,19 @@ pub fn load_wallets_from_storage() -> Vec<WalletInfo> {
 pub fn import_wallet_from_key(private_key: &str, name: String) -> Result<WalletInfo, String> {
     let private_key = private_key.trim();
     
-    let key_bytes = bs58::decode(private_key)
-        .into_vec()
-        .map_err(|e| format!("Invalid base58 format: {}", e))?;
+    // Try to parse the key based on format
+    let key_bytes = if private_key.starts_with('[') && private_key.ends_with(']') {
+        // JSON array format: [252,183,...159,189]
+        parse_json_array_key(private_key)?
+    } else if private_key.contains(',') {
+        // Comma-separated format: 252,183,...159,189
+        parse_comma_separated_key(private_key)?
+    } else {
+        // Base58 format (original)
+        bs58::decode(private_key)
+            .into_vec()
+            .map_err(|e| format!("Invalid base58 format: {}", e))?
+    };
     
     let wallet_name = if name.is_empty() { 
         "Imported Wallet".to_string() 
@@ -351,6 +455,45 @@ pub fn import_wallet_from_key(private_key: &str, name: String) -> Result<WalletI
     let wallet = Wallet::from_private_key(&key_bytes, wallet_name)?;
     
     Ok(wallet.to_wallet_info())
+}
+
+// Helper function to parse JSON array format
+fn parse_json_array_key(key_str: &str) -> Result<Vec<u8>, String> {
+    serde_json::from_str::<Vec<u8>>(key_str)
+        .map_err(|e| format!("Invalid JSON array format: {}", e))
+}
+
+// Helper function to parse comma-separated format
+fn parse_comma_separated_key(key_str: &str) -> Result<Vec<u8>, String> {
+    key_str
+        .split(',')
+        .map(|s| {
+            s.trim()
+                .parse::<u8>()
+                .map_err(|e| format!("Invalid number in key: {}", e))
+        })
+        .collect::<Result<Vec<u8>, String>>()
+}
+
+// Optional: Add a validation function to check key format before import
+pub fn validate_key_format(private_key: &str) -> Result<String, String> {
+    let private_key = private_key.trim();
+    
+    if private_key.is_empty() {
+        return Err("Private key is empty".to_string());
+    }
+    
+    if private_key.starts_with('[') && private_key.ends_with(']') {
+        return Ok("JSON array format".to_string());
+    } else if private_key.contains(',') {
+        return Ok("Comma-separated format".to_string());
+    } else {
+        // Check if it's valid base58
+        bs58::decode(private_key)
+            .into_vec()
+            .map_err(|e| format!("Invalid base58 format: {}", e))?;
+        return Ok("Base58 format".to_string());
+    }
 }
 
 pub fn save_rpc_to_storage(rpc_url: &str) {
@@ -516,4 +659,125 @@ pub fn load_jito_settings_from_storage() -> JitoSettings {
 
 pub fn get_current_jito_settings() -> JitoSettings {
     load_jito_settings_from_storage()
+}
+
+/// Delete a wallet by address from storage
+pub fn delete_wallet_from_storage(wallet_address: &str) {
+    log::info!("🔄 Attempting to delete wallet: {}", wallet_address);
+    
+    let mut wallets = load_wallets_from_storage();
+    let original_count = wallets.len();
+    
+    // Remove wallet with matching address
+    wallets.retain(|wallet| wallet.address != wallet_address);
+    
+    if wallets.len() < original_count {
+        log::info!("✅ Wallet {} removed from memory", wallet_address);
+        
+        // Save updated wallet list
+        save_wallets_to_storage(&wallets);
+        log::info!("✅ Wallet deletion completed. {} wallets remaining.", wallets.len());
+    } else {
+        log::warn!("⚠️ Wallet {} not found in storage", wallet_address);
+    }
+}
+
+/// Save wallets list to storage (only add this if it doesn't already exist in your storage.rs)
+pub fn save_wallets_to_storage(wallets: &Vec<WalletInfo>) {
+    log::info!("🔄 Saving {} wallets to storage", wallets.len());
+    
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let serialized = serde_json::to_string(wallets).unwrap();
+        storage.set_item("wallets", &serialized).unwrap();
+        log::info!("✅ Wallets saved to web storage");
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        match ensure_storage_dir() {
+            Ok(_) => {
+                let wallet_file = get_wallets_file_path();
+                match serde_json::to_string_pretty(wallets) {
+                    Ok(serialized) => {
+                        match std::fs::write(&wallet_file, &serialized) {
+                            Ok(_) => {
+                                log::info!("✅ Wallets successfully saved to: {}", wallet_file);
+                            }
+                            Err(e) => {
+                                log::error!("❌ Failed to write wallets to {}: {}", wallet_file, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("❌ Failed to serialize wallets: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("❌ Failed to ensure storage directory: {}", e);
+            }
+        }
+    }
+}
+
+pub fn has_completed_onboarding() -> bool {
+    log::info!("🔄 Checking onboarding status");
+    
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        storage.get_item("onboarding_completed")
+            .unwrap()
+            .map(|val| val == "true")
+            .unwrap_or(false)
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        let storage_dir = get_storage_dir_simple();
+        let onboarding_file = format!("{}/onboarding_completed.txt", storage_dir);
+        
+        match std::fs::read_to_string(&onboarding_file) {
+            Ok(data) => {
+                let completed = data.trim() == "true";
+                log::info!("✅ Onboarding status: {}", completed);
+                completed
+            }
+            Err(_) => {
+                log::info!("📝 No onboarding file found - first launch");
+                false
+            }
+        }
+    }
+}
+
+pub fn mark_onboarding_completed() {
+    log::info!("✅ Marking onboarding as completed");
+    
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        storage.set_item("onboarding_completed", "true").unwrap();
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        if let Ok(_) = ensure_storage_dir() {
+            let storage_dir = get_storage_dir_simple();
+            let onboarding_file = format!("{}/onboarding_completed.txt", storage_dir);
+            
+            match std::fs::write(&onboarding_file, "true") {
+                Ok(_) => log::info!("✅ Onboarding completion saved"),
+                Err(e) => log::error!("❌ Failed to save onboarding status: {}", e),
+            }
+        }
+    }
 }

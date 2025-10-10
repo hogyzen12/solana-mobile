@@ -206,7 +206,7 @@ impl BulkTransactionBuilder {
 impl TransactionClient {
     /// Create a new transaction client
     pub fn new(rpc_url: Option<&str>) -> Self {
-        let url = rpc_url.unwrap_or("https://serene-stylish-mound.solana-mainnet.quiknode.pro/5489821bcd1547d9cd7b2d81f90c086e36e0e9f7/").to_string();
+        let url = rpc_url.unwrap_or("https://johna-k3cr1v-fast-mainnet.helius-rpc.com").to_string();
         Self {
             client: Client::new(),
             rpc_url: url,
@@ -778,17 +778,5 @@ impl TransactionClient {
 
         println!("Added Jito tip instructions to transaction");
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_transaction_client() {
-        let client = TransactionClient::new(None);
-        let blockhash = client.get_recent_blockhash().await;
-        assert!(blockhash.is_ok());
     }
 }

@@ -8,15 +8,18 @@ use solana_sdk::{
     hash::Hash,
     commitment_config::CommitmentConfig,
 };
+use solana_sdk::stake::instruction::merge;
 use crate::wallet::{Wallet, WalletInfo};
 use crate::hardware::HardwareWallet;
 use crate::signing::{TransactionSigner, software::SoftwareSigner, hardware::HardwareSigner};
 use crate::storage::get_current_jito_settings;
 use crate::transaction::TransactionClient;
 use crate::rpc::{ get_balance, get_minimum_balance_for_rent_exemption };
+use crate::rpc::{get_stake_accounts_by_owner, get_epoch_info, StakeAccountRpcData, EpochInfo};
 use std::sync::Arc;
 use std::str::FromStr;
 use std::error::Error;
+use std::collections::HashMap;
 use bincode;
 use bs58;
 use reqwest::Client;
@@ -46,6 +49,35 @@ pub struct DetailedStakeAccount {
     pub validator_name: String,
     pub activation_epoch: Option<u64>,
     pub deactivation_epoch: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MergeGroup {
+    pub accounts: Vec<DetailedStakeAccount>,
+    pub merge_type: MergeType,
+    pub total_amount: u64,
+    pub validator_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MergeType {
+    TwoDeactivated,
+    InactiveIntoActivating,
+    TwoActivated { voter_pubkey: String },
+    TwoActivatingSameEpoch { voter_pubkey: String, activation_epoch: u64 },
+}
+
+impl std::fmt::Display for MergeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MergeType::TwoDeactivated => write!(f, "Merge Deactivated Accounts"),
+            MergeType::InactiveIntoActivating => write!(f, "Merge into Activating Account"),
+            MergeType::TwoActivated { .. } => write!(f, "Merge Active Accounts"),
+            MergeType::TwoActivatingSameEpoch { activation_epoch, .. } => {
+                write!(f, "Merge Activating Accounts (Epoch {})", activation_epoch)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -103,7 +135,7 @@ pub struct StakingClient {
 impl StakingClient {
     /// Create a new staking client
     pub fn new(rpc_url: Option<&str>) -> Self {
-        let url = rpc_url.unwrap_or("https://serene-stylish-mound.solana-mainnet.quiknode.pro/5489821bcd1547d9cd7b2d81f90c086e36e0e9f7/");
+        let url = rpc_url.unwrap_or("https://johna-k3cr1v-fast-mainnet.helius-rpc.com");
         Self {
             transaction_client: TransactionClient::new(Some(url)),
             rpc_url: url.to_string(),
@@ -391,14 +423,117 @@ pub async fn create_stake_account(
     staking_client.create_stake_account_with_jito(signer.as_ref(), validator_vote_account, stake_amount_sol).await
 }
 
-/// Scan for stake accounts (placeholder function to satisfy stake_modal.rs)
+/// Convert RPC stake account data to DetailedStakeAccount format
+fn convert_rpc_to_detailed_stake_account(
+    rpc_data: &StakeAccountRpcData,
+    current_epoch: u64,
+) -> Result<DetailedStakeAccount, StakingError> {
+    let pubkey = Pubkey::from_str(&rpc_data.pubkey)
+        .map_err(|_| StakingError::RpcError("Invalid stake account pubkey".to_string()))?;
+    
+    let balance = rpc_data.account.lamports;
+    let rent_exempt_reserve = rpc_data.account.data.parsed.info.meta.rent_exempt_reserve
+        .parse::<u64>()
+        .unwrap_or(0);
+    
+    // Extract activation and deactivation epochs
+    let (activation_epoch, deactivation_epoch, validator_name) = if let Some(stake_details) = &rpc_data.account.data.parsed.info.stake {
+        let activation_epoch = stake_details.delegation.activation_epoch
+            .parse::<u64>()
+            .ok();
+        let deactivation_epoch = stake_details.delegation.deactivation_epoch
+            .parse::<u64>()
+            .ok()
+            .filter(|&epoch| epoch != u64::MAX); // Filter out max value (means no deactivation)
+        
+        // For now, use vote account as validator name (you could enhance this with a lookup)
+        let validator_name = format!("Validator {}", &stake_details.delegation.voter[0..8]);
+        
+        (activation_epoch, deactivation_epoch, validator_name)
+    } else {
+        (None, None, "Unknown Validator".to_string())
+    };
+    
+    // Determine stake account state
+    let state = if let Some(stake_details) = &rpc_data.account.data.parsed.info.stake {
+        let activation_epoch_num = stake_details.delegation.activation_epoch
+            .parse::<u64>()
+            .unwrap_or(u64::MAX);
+        let deactivation_epoch_num = stake_details.delegation.deactivation_epoch
+            .parse::<u64>()
+            .unwrap_or(u64::MAX);
+        
+        if deactivation_epoch_num != u64::MAX && deactivation_epoch_num <= current_epoch {
+            StakeAccountState::Uninitialized // Deactivated
+        } else if activation_epoch_num <= current_epoch {
+            StakeAccountState::Delegated // Active
+        } else {
+            StakeAccountState::Initialized // Activating
+        }
+    } else {
+        StakeAccountState::Initialized
+    };
+    
+    Ok(DetailedStakeAccount {
+        pubkey,
+        balance,
+        rent_exempt_reserve,
+        state,
+        validator_name,
+        activation_epoch,
+        deactivation_epoch,
+    })
+}
+
+/// Scan for stake accounts using the new RPC function
 pub async fn scan_stake_accounts(
-    _wallet_address: &str,
-    _rpc_url: Option<&str>,
+    wallet_address: &str,
+    rpc_url: Option<&str>,
 ) -> Result<Vec<DetailedStakeAccount>, StakingError> {
-    // Placeholder implementation - return empty vec for now
-    // You can implement actual stake account scanning here later
-    Ok(Vec::new())
+    println!("🔍 Starting stake account scan for wallet: {}", wallet_address);
+    
+    // Get current epoch info to determine activation status
+    let epoch_info = get_epoch_info(rpc_url).await
+        .map_err(|e| StakingError::RpcError(format!("Failed to get epoch info: {}", e)))?;
+    
+    println!("📅 Current epoch: {}", epoch_info.epoch);
+    
+    // Get stake accounts using the new RPC function
+    let rpc_stake_accounts = get_stake_accounts_by_owner(wallet_address, rpc_url).await
+        .map_err(|e| StakingError::RpcError(format!("Failed to get stake accounts: {}", e)))?;
+    
+    println!("🎯 Found {} raw stake accounts from RPC", rpc_stake_accounts.len());
+    
+    // Convert RPC data to our detailed format
+    let mut detailed_accounts = Vec::new();
+    
+    for rpc_account in &rpc_stake_accounts {
+        match convert_rpc_to_detailed_stake_account(rpc_account, epoch_info.epoch) {
+            Ok(detailed) => {
+                detailed_accounts.push(detailed);
+            }
+            Err(e) => {
+                println!("⚠️  Failed to convert stake account {}: {}", rpc_account.pubkey, e);
+            }
+        }
+    }
+    
+    // Log summary
+    let total_staked: u64 = detailed_accounts.iter()
+        .map(|acc| acc.balance.saturating_sub(acc.rent_exempt_reserve))
+        .sum();
+    
+    let active_count = detailed_accounts.iter()
+        .filter(|acc| matches!(acc.state, StakeAccountState::Delegated))
+        .count();
+    
+    println!("📈 SUMMARY: {} accounts, {} active, {:.6} SOL total staked", 
+        detailed_accounts.len(), 
+        active_count, 
+        total_staked as f64 / 1_000_000_000.0
+    );
+    
+    Ok(detailed_accounts)
 }
 
 /// Get stake account information
@@ -410,3 +545,167 @@ pub async fn get_stake_account_info(
     // For now, we'll return None
     Ok(None)
 }
+
+/// Find all possible merge groups from a list of stake accounts
+/// Groups active stake accounts by validator if there are 2 or more
+/// Find all possible merge groups from a list of stake accounts
+/// Groups active stake accounts by validator if there are 2 or more
+pub fn find_mergeable_stake_accounts(
+    accounts: &[DetailedStakeAccount],
+    _current_epoch: u64,
+) -> Vec<MergeGroup> {
+    let mut merge_groups = Vec::new();
+    
+    println!("🔍 Analyzing {} accounts for merge opportunities...", accounts.len());
+    
+    // Group ACTIVE accounts by validator
+    let mut by_validator: HashMap<String, Vec<DetailedStakeAccount>> = HashMap::new();
+    
+    for account in accounts {
+        if account.state == StakeAccountState::Delegated {
+            let validator_key = account.validator_name.clone();
+            by_validator.entry(validator_key).or_insert_with(Vec::new).push(account.clone());
+        }
+    }
+    
+    for (validator_name, active_accounts) in by_validator {
+        if active_accounts.len() >= 2 {
+            // Print before moving values
+            println!("✅ Found merge group for validator {} with {} active accounts", 
+                     validator_name, active_accounts.len());
+            
+            let total_amount: u64 = active_accounts.iter()
+                .map(|acc| acc.balance.saturating_sub(acc.rent_exempt_reserve))
+                .sum();
+            
+            // Extract voter_pubkey from validator_name (trim "Validator " prefix)
+            let voter_pubkey = validator_name.trim_start_matches("Validator ").trim().to_string();
+            
+            merge_groups.push(MergeGroup {
+                accounts: active_accounts,  // Move here after printing
+                merge_type: MergeType::TwoActivated { voter_pubkey },
+                total_amount,
+                validator_name,  // Move string here
+            });
+        }
+    }
+    
+    let total_groups = merge_groups.len();
+    println!("🎯 Found {} merge opportunities total", total_groups);
+    
+    if total_groups == 0 {
+        println!("💡 No merge opportunities found. This is normal if:");
+        println!("   - No validators have 2+ active stake accounts");
+    }
+    
+    merge_groups
+}
+
+/// Build merge transaction instructions for a group of mergeable stake accounts
+pub async fn build_merge_transaction(
+    merge_group: &MergeGroup,
+    authority_pubkey: &Pubkey,
+    _rpc_url: Option<&str>,
+) -> Result<Vec<solana_sdk::instruction::Instruction>, StakingError> {
+    println!("🔗 Building merge transaction for {} accounts", merge_group.accounts.len());
+    
+    if merge_group.accounts.len() < 2 {
+        return Err(StakingError::InvalidAmount("Need at least 2 accounts to merge".to_string()));
+    }
+
+    let mut instructions = Vec::new();
+    let destination_account = &merge_group.accounts[0];
+    
+    // Create merge instructions: merge all accounts into the first one
+    for source_account in merge_group.accounts.iter().skip(1) {
+        let merge_instructions = merge(
+            &destination_account.pubkey,  // destination (keep this one)
+            &source_account.pubkey,       // source (will be closed after merge)
+            authority_pubkey,             // stake authority
+        );
+        // The merge function returns Vec<Instruction>, so extend instead of push
+        instructions.extend(merge_instructions);
+    }
+    
+    println!("✅ Built {} merge instructions", instructions.len());
+    Ok(instructions)
+}
+
+/// Execute merge operation for a group of stake accounts
+pub async fn merge_stake_accounts(
+    merge_group: &MergeGroup,
+    wallet_info: Option<&WalletInfo>,
+    hardware_wallet: Option<Arc<HardwareWallet>>,
+    rpc_url: Option<&str>,
+) -> Result<String, StakingError> {
+    println!("🔄 MERGE OPERATION: Merging {} accounts", merge_group.accounts.len());
+    
+    // Create signer (reuse existing pattern)
+    let signer: Box<dyn TransactionSigner> = if let Some(hw) = hardware_wallet {
+        Box::new(HardwareSigner::from_wallet(hw))
+    } else if let Some(w) = wallet_info {
+        let wallet = Wallet::from_wallet_info(w)
+            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
+        Box::new(SoftwareSigner::new(wallet))
+    } else {
+        return Err(StakingError::WalletError("No wallet provided".to_string()));
+    };
+
+    // Get authority pubkey
+    let authority_pubkey_str = signer.get_public_key().await
+        .map_err(|e| StakingError::WalletError(format!("Failed to get public key: {}", e)))?;
+    let authority_pubkey = Pubkey::from_str(&authority_pubkey_str)
+        .map_err(|_| StakingError::WalletError("Invalid wallet address".to_string()))?;
+
+    // Build merge instructions
+    let mut instructions = build_merge_transaction(merge_group, &authority_pubkey, rpc_url).await?;
+
+    // Apply Jito tips if enabled
+    let staking_client = StakingClient::new(rpc_url);
+    let jito_settings = get_current_jito_settings();
+    if jito_settings.jito_tx {
+        println!("🚀 Applying Jito modifications");
+        staking_client.apply_jito_modifications(&authority_pubkey, &mut instructions)
+            .map_err(|e| StakingError::TransactionFailed(format!("Jito error: {}", e)))?;
+    }
+
+    // Create and sign transaction (reuse existing pattern)
+    let recent_blockhash = staking_client.transaction_client.get_recent_blockhash().await
+        .map_err(|e| StakingError::RpcError(format!("Failed to get blockhash: {}", e)))?;
+
+    let mut message = Message::new(&instructions, Some(&authority_pubkey));
+    message.recent_blockhash = recent_blockhash;
+    
+    let transaction = VersionedTransaction {
+        signatures: vec![SolanaSignature::default(); message.header.num_required_signatures as usize],
+        message: VersionedMessage::Legacy(message),
+    };
+    
+    // Sign transaction
+    let message_bytes = transaction.message.serialize();
+    let signature_bytes = signer.sign_message(&message_bytes).await
+        .map_err(|e| StakingError::WalletError(format!("Failed to sign: {}", e)))?;
+    
+    if signature_bytes.len() != 64 {
+        return Err(StakingError::WalletError("Invalid signature length".to_string()));
+    }
+    
+    let mut sig_array = [0u8; 64];
+    sig_array.copy_from_slice(&signature_bytes);
+    let solana_signature = SolanaSignature::from(sig_array);
+    
+    let mut signed_transaction = transaction;
+    signed_transaction.signatures[0] = solana_signature;
+    
+    // Send transaction
+    let serialized = bincode::serialize(&signed_transaction)
+        .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
+    let encoded = bs58::encode(serialized).into_string();
+    
+    let signature = staking_client.send_staking_transaction(&encoded).await
+        .map_err(|e| StakingError::TransactionFailed(format!("Send failed: {}", e)))?;
+
+    println!("✅ Merge completed: {}", signature);
+    Ok(signature)
+}
+

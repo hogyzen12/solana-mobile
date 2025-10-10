@@ -1,6 +1,5 @@
-// Updated main.rs - Following the simplified pattern from original_main.rs
-
 use dioxus::prelude::*;
+use std::sync::Arc;
 
 mod wallet;
 mod rpc;
@@ -12,8 +11,12 @@ mod storage;
 mod components;
 mod validators;
 mod staking;
+mod unstaking;
 mod currency;
 mod currency_utils;
+mod sns;
+mod config;
+mod token_utils;
 
 // Add MWA modules for Android only
 #[cfg(target_os = "android")]
@@ -21,7 +24,7 @@ pub mod ffi;
 
 use components::*;
 
-// Add MWA imports for Android only
+// Add Mwa imports for Android only
 #[cfg(target_os = "android")]
 use std::str::FromStr;
 #[cfg(target_os = "android")]
@@ -38,7 +41,11 @@ enum Route {
     WalletView {},
 }
 
+// CSS handling: local assets for Android, web-hosted for others
+#[cfg(target_os = "android")]
 const MAIN_CSS: Asset = asset!("/assets/main.css");
+#[cfg(not(target_os = "android"))]
+const MAIN_CSS_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/main.css";
 
 // MWA IPC Channel Setup (Android only)
 #[cfg(target_os = "android")]
@@ -53,7 +60,7 @@ static TX: OnceCell<Sender<MsgFromKotlin>> = OnceCell::new();
 #[cfg(target_os = "android")]
 static RX: OnceCell<Receiver<MsgFromKotlin>> = OnceCell::new();
 
-// Simple MWA state enum (following original_main.rs pattern)
+// Simple MWA state enum
 #[cfg(target_os = "android")]
 #[derive(Debug, Clone)]
 pub enum WalletState {
@@ -69,7 +76,7 @@ fn init_ipc_channel() {
     RX.set(rx).expect("initialization of ffi receiver just once.");
 }
 
-/// Send thru channel from kotlin to rust (Android only)
+/// Send thru channel from Kotlin to Rust (Android only)
 #[cfg(target_os = "android")]
 pub fn send_msg_from_ffi(msg: MsgFromKotlin) {
     if let Some(tx) = TX.get() {
@@ -93,14 +100,14 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    // Simple MWA state management (Android only) - Following original_main.rs pattern
+    // Simple MWA state management (Android only)
     #[cfg(target_os = "android")]
     {
         // Create simple wallet state (no complex MwaWallet struct)
         let mut mwa_wallet_state = use_signal(|| WalletState::None);
         use_context_provider(|| mwa_wallet_state);
         
-        // Listen for MWA messages from Kotlin (EXACT pattern from original_main.rs)
+        // Listen for MWA messages from Kotlin
         use_future(move || async move {
             if let Some(rx) = RX.get().cloned() {
                 while let Ok(msg) = rx.recv().await {
@@ -125,8 +132,38 @@ fn App() -> Element {
         });
     }
 
+    // Initialize SNS resolver with your RPC endpoint
+    let sns_resolver = Arc::new(sns::SnsResolver::new(
+        "https://johna-k3cr1v-fast-mainnet.helius-rpc.com".to_string() // Use your preferred RPC endpoint
+    ));
+
+    // Provide SNS resolver to the entire app
+    use_context_provider(|| sns_resolver);
+
+    // Check if onboarding has been completed
+    let mut show_onboarding = use_signal(|| true);
+    //let mut show_onboarding = use_signal(|| !storage::has_completed_onboarding());
+
+    // Determine CSS href based on platform
+    let css_href = {
+        #[cfg(target_os = "android")]
+        { MAIN_CSS }
+        #[cfg(not(target_os = "android"))]
+        { MAIN_CSS_URL }
+    };
+
     rsx! {
-        document::Link { rel: "stylesheet", href: MAIN_CSS }
-        Router::<Route> {}
+        document::Link { rel: "stylesheet", href: css_href }
+        
+        // Show onboarding on first launch, otherwise show the main app
+        if show_onboarding() {
+            OnboardingFlow {
+                on_complete: move |_| {
+                    show_onboarding.set(false);
+                }
+            }
+        } else {
+            Router::<Route> {}
+        }
     }
 }
