@@ -153,11 +153,17 @@ impl SnsResolver {
             let domain_for_error = trimmed_input.to_string(); // Clone for error messages
             
             // This is a workaround for sync contexts - in practice, you'd want to make everything async
-            let rt = tokio::runtime::Handle::current();
+            let handle = tokio::runtime::Handle::try_current().ok();
             match std::thread::spawn(move || {
-                rt.block_on(async {
-                    resolver.resolve_domain_async(&domain).await
-                })
+                if let Some(handle) = handle {
+                    handle.block_on(async { resolver.resolve_domain_async(&domain).await })
+                } else {
+                    let rt = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .map_err(|e| SnsError::NetworkError(format!("Tokio runtime init failed: {}", e)))?;
+                    rt.block_on(async { resolver.resolve_domain_async(&domain).await })
+                }
             }).join() {
                 Ok(result) => match result {
                     Ok(pubkey) => Ok(pubkey),

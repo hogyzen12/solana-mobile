@@ -1,4 +1,3 @@
-use jni::sys::jobject;
 use jni::{
     objects::{GlobalRef, JClass, JObject, JString, JValue},
     JNIEnv, JavaVM,
@@ -134,22 +133,44 @@ pub extern "system" fn Java_dev_dioxus_main_WryActivity_cacheActivityInstance(
 
 /* ---------- Rust helpers ---------- */
 
+fn find_dioxus_utils_class(
+    env: &mut JNIEnv,
+    activity_obj: &JObject,
+) -> jni::errors::Result<GlobalRef> {
+    // When calling from a native-attached thread, FindClass can fail because it
+    // doesn't use the app classloader. Always resolve via the Activity's loader.
+    let class_loader = env
+        .call_method(
+            activity_obj,
+            "getClassLoader",
+            "()Ljava/lang/ClassLoader;",
+            &[],
+        )?
+        .l()?;
+    let class_name = env.new_string("dev.dioxus.main.DioxusUtils")?;
+    let class_name_obj: JObject = class_name.into();
+    let class_obj = env
+        .call_method(
+            class_loader,
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            &[JValue::Object(&class_name_obj)],
+        )?
+        .l()?;
+    env.new_global_ref(class_obj)
+}
+
 fn do_establish_mwa_session(
     env: &mut JNIEnv,
-    activity_jobject: jobject,
+    activity_obj: &JObject,
 ) -> jni::errors::Result<String> {
-    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
     const METHOD_NAME: &str = "establishMwaSession";
     // JNI signature for: static String establishMwaSession(androidx.activity.ComponentActivity activity)
     const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;)Ljava/lang/String;";
 
-    // Find the class dev.dioxus.main.DioxusUtils
-    let class = env.find_class(CLASS_NAME)?;
-
-    // Convert the raw jobject (which is a pointer/handle to the ComponentActivity instance)
-    // into a jni-rs JObject wrapper.
-    // Safety: Assumes activity_jobject is a valid, non-null JNI reference to a ComponentActivity.
-    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let class = find_dioxus_utils_class(env, activity_obj)?;
+    let class_obj = env.new_local_ref(class.as_obj())?;
+    let class = JClass::from(class_obj);
 
     // Prepare arguments for the JNI call.
     // JValue::from takes a reference to JObject.
@@ -174,19 +195,16 @@ fn do_establish_mwa_session(
 
 fn do_sign_transaction(
     env: &mut JNIEnv,
-    activity_jobject: jobject,
+    activity_obj: &JObject,
     transaction: &[u8],
 ) -> jni::errors::Result<String> {
-    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
     const METHOD_NAME: &str = "signTransaction";
     // JNI signature for: static String signTransaction(androidx.activity.ComponentActivity activity, byte[] transaction)
     const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;[B)Ljava/lang/String;";
 
-    // Find the class
-    let class = env.find_class(CLASS_NAME)?;
-
-    // Convert raw jobject to JObject
-    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let class = find_dioxus_utils_class(env, activity_obj)?;
+    let class_obj = env.new_local_ref(class.as_obj())?;
+    let class = JClass::from(class_obj);
 
     // Convert rust byte slice to java byte array
     let transaction_jbyte_array = env.byte_array_from_slice(transaction)?;
@@ -210,19 +228,16 @@ fn do_sign_transaction(
 
 fn do_sign_message(
     env: &mut JNIEnv,
-    activity_jobject: jobject,
+    activity_obj: &JObject,
     message: &[u8],
 ) -> jni::errors::Result<String> {
-    const CLASS_NAME: &str = "dev/dioxus/main/DioxusUtils";
     const METHOD_NAME: &str = "signMessage";
     // JNI signature for: static String signTransaction(androidx.activity.ComponentActivity activity, byte[] message)
     const METHOD_SIG: &str = "(Landroidx/activity/ComponentActivity;[B)Ljava/lang/String;";
 
-    // Find the class
-    let class = env.find_class(CLASS_NAME)?;
-
-    // Convert raw jobject to JObject
-    let activity_obj = unsafe { JObject::from_raw(activity_jobject) };
+    let class = find_dioxus_utils_class(env, activity_obj)?;
+    let class_obj = env.new_local_ref(class.as_obj())?;
+    let class = JClass::from(class_obj);
 
     // Convert rust byte slice to java byte array
     let message_jbyte_array = env.byte_array_from_slice(message)?;
@@ -253,9 +268,8 @@ pub fn initiate_mwa_session_from_dioxus() -> String {
         }
     };
     with_env(|env| {
-        let activity_jobject_local_ref = activity_global_ref.as_obj();
-        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
-        match do_establish_mwa_session(env, raw_activity_jobject) {
+        let activity_obj = activity_global_ref.as_obj();
+        match do_establish_mwa_session(env, activity_obj) {
             Ok(s) => s,
             Err(e) => {
                 log::error!("JNI error in initiate_mwa_session_from_dioxus when calling do_establish_mwa_session: {:?}", e);
@@ -281,9 +295,8 @@ pub fn initiate_sign_transaction_from_dioxus(transaction: &[u8]) -> String {
         }
     };
     with_env(|env| {
-        let activity_jobject_local_ref = activity_global_ref.as_obj();
-        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
-        match do_sign_transaction(env, raw_activity_jobject, transaction) {
+        let activity_obj = activity_global_ref.as_obj();
+        match do_sign_transaction(env, activity_obj, transaction) {
             Ok(s) => s,
             Err(e) => {
                 log::error!(
@@ -309,9 +322,8 @@ pub fn initiate_sign_message_from_dioxus(message: &[u8]) -> String {
         }
     };
     with_env(|env| {
-        let activity_jobject_local_ref = activity_global_ref.as_obj();
-        let raw_activity_jobject: jobject = activity_jobject_local_ref.as_raw();
-        match do_sign_message(env, raw_activity_jobject, message) {
+        let activity_obj = activity_global_ref.as_obj();
+        match do_sign_message(env, activity_obj, message) {
             Ok(s) => s,
             Err(e) => {
                 log::error!("JNI error in initiate_sign_message_from_dioxus: {:?}", e);

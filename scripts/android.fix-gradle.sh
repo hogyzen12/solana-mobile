@@ -26,6 +26,11 @@ if [ -z "$PKG" ]; then
   exit 1
 fi
 
+RES_DIR="$APP_DIR/app/src/main/res"
+if [ -d "$RES_DIR" ]; then
+  find "$RES_DIR" -type f -path "*/mipmap-*/ic_launcher.webp" -exec rm -f {} +
+fi
+
 if [ -f "$MAIN_ACTIVITY" ]; then
   perl -0pi -e "s@^\\Q${PKG}\\E\\.BuildConfig;?\\n@@mg" "$MAIN_ACTIVITY"
   perl -0pi -e "s@^import\\s+[^\\n]*BuildConfig;?\\s*\\n@@mg" "$MAIN_ACTIVITY"

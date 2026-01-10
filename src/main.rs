@@ -82,6 +82,10 @@ pub enum MsgFromKotlin {
 static TX: OnceCell<Sender<MsgFromKotlin>> = OnceCell::new();
 #[cfg(target_os = "android")]
 static RX: OnceCell<Receiver<MsgFromKotlin>> = OnceCell::new();
+#[cfg(target_os = "android")]
+static PUBKEY_TX: OnceCell<Sender<String>> = OnceCell::new();
+#[cfg(target_os = "android")]
+static PUBKEY_RX: OnceCell<Receiver<String>> = OnceCell::new();
 
 // Simple MWA state enum
 #[cfg(target_os = "android")]
@@ -95,15 +99,31 @@ pub enum WalletState {
 #[cfg(target_os = "android")]
 fn init_ipc_channel() {
     let (tx, rx) = unbounded::<MsgFromKotlin>();
+    let (pub_tx, pub_rx) = unbounded::<String>();
     TX.set(tx).expect("initialization of ffi sender just once.");
     RX.set(rx).expect("initialization of ffi receiver just once.");
+    PUBKEY_TX
+        .set(pub_tx)
+        .expect("initialization of pubkey sender just once.");
+    PUBKEY_RX
+        .set(pub_rx)
+        .expect("initialization of pubkey receiver just once.");
 }
 
 /// Send through channel from Kotlin to Rust (Android only)
 #[cfg(target_os = "android")]
 pub fn send_msg_from_ffi(msg: MsgFromKotlin) {
-    if let Some(tx) = TX.get() {
-        let _ = tx.try_send(msg);
+    match msg {
+        MsgFromKotlin::Pubkey(pubkey) => {
+            if let Some(tx) = PUBKEY_TX.get() {
+                let _ = tx.try_send(pubkey);
+            }
+        }
+        other => {
+            if let Some(tx) = TX.get() {
+                let _ = tx.try_send(other);
+            }
+        }
     }
 }
 
@@ -186,21 +206,11 @@ fn App() -> Element {
         use_context_provider(|| mwa_wallet_state);
 
         use_future(move || async move {
-            if let Some(rx) = RX.get().cloned() {
-                while let Ok(msg) = rx.recv().await {
-                    match msg {
-                        MsgFromKotlin::Pubkey(base58) => {
-                            if let Ok(pubkey) = Pubkey::from_str(base58.as_str()) {
-                                log::info!("🔗 MWA Connected with pubkey: {}", pubkey);
-                                mwa_wallet_state.set(WalletState::Pubkey(pubkey));
-                            }
-                        }
-                        MsgFromKotlin::SignedTransaction(base64_tx) => {
-                            log::info!("📝 MWA: Received signed transaction: {}", base64_tx);
-                        }
-                        MsgFromKotlin::SignedMessage(signature) => {
-                            log::info!("✍️ MWA: Received signed message: {}", signature);
-                        }
+            if let Some(rx) = PUBKEY_RX.get().cloned() {
+                while let Ok(base58) = rx.recv().await {
+                    if let Ok(pubkey) = Pubkey::from_str(base58.as_str()) {
+                        log::info!("🔗 MWA Connected with pubkey: {}", pubkey);
+                        mwa_wallet_state.set(WalletState::Pubkey(pubkey));
                     }
                 }
             }

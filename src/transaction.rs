@@ -593,7 +593,8 @@ impl TransactionClient {
         
         // Parallel TPU send (fire-and-forget if TPU is enabled)
         // DISABLED ON iOS: iOS restricts tokio::spawn in background, causing crashes
-        #[cfg(not(target_os = "ios"))]
+        // DISABLED ON Android: observed panics in TPU client thread on device
+        #[cfg(all(not(target_os = "ios"), not(target_os = "android")))]
         {
             if let Some(tpu_sender) = self.get_tpu_sender().await {
                 let tpu_sender_clone = Arc::clone(&tpu_sender);
@@ -616,9 +617,9 @@ impl TransactionClient {
             }
         }
 
-        #[cfg(target_os = "ios")]
+        #[cfg(any(target_os = "ios", target_os = "android"))]
         {
-            println!("[TPU] TPU disabled on iOS - using RPC-only submission");
+            println!("[TPU] TPU disabled on this platform - using RPC-only submission");
         }
         
         // RPC send (unchanged - this is the source of truth)
