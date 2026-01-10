@@ -1,14 +1,13 @@
 // src/staking.rs
 use solana_sdk::{
     pubkey::Pubkey,
-    system_instruction,
     transaction::VersionedTransaction,
     message::{Message, VersionedMessage},
     signature::{Signature as SolanaSignature, Keypair, Signer}, // Add Signer trait
     hash::Hash,
-    commitment_config::CommitmentConfig,
 };
-use solana_sdk::stake::instruction::merge;
+use solana_system_interface::instruction as system_instruction;
+use solana_stake_interface::instruction::merge;
 use crate::wallet::{Wallet, WalletInfo};
 use crate::hardware::HardwareWallet;
 use crate::signing::{TransactionSigner, software::SoftwareSigner, hardware::HardwareSigner};
@@ -16,6 +15,7 @@ use crate::storage::get_current_jito_settings;
 use crate::transaction::TransactionClient;
 use crate::rpc::{ get_balance, get_minimum_balance_for_rent_exemption };
 use crate::rpc::{get_stake_accounts_by_owner, get_epoch_info, StakeAccountRpcData, EpochInfo};
+use crate::timeout;
 use std::sync::Arc;
 use std::str::FromStr;
 use std::error::Error;
@@ -26,7 +26,7 @@ use reqwest::Client;
 use serde_json::{Value, json};
 
 // Use the correct staking interface
-use solana_sdk::stake::{
+use solana_stake_interface::{
     instruction::{initialize, delegate_stake},
     state::{Authorized, Lockup},
 };
@@ -241,6 +241,7 @@ impl StakingClient {
         signer: &dyn TransactionSigner,
         validator_vote_account: &str,
         stake_amount_sol: f64,
+        is_hardware_wallet: bool,
     ) -> Result<StakeAccountInfo, StakingError> {
         // Convert SOL to lamports
         let stake_amount_lamports = (stake_amount_sol * 1_000_000_000.0) as u64;
@@ -290,19 +291,33 @@ impl StakingClient {
         let stake_account_keypair = Keypair::new();
         let stake_account_pubkey = stake_account_keypair.pubkey(); // This should work now with Signer trait
 
+        // Get current slot and build timeout instruction (FIRST)
+        let current_slot = self.transaction_client.get_current_slot().await
+            .map_err(|e| StakingError::RpcError(format!("Failed to get current slot: {}", e)))?;
+        let timeout_ix = timeout::build_timeout_instruction_from_current(
+            current_slot,
+            timeout::DEFAULT_SLOT_WINDOW,
+        )
+            .map_err(|e| StakingError::TransactionFailed(format!("Failed to build timeout instruction: {}", e)))?;
+        println!("Added timeout protection: current_slot={}, max_slot={}", 
+            current_slot, current_slot + timeout::DEFAULT_SLOT_WINDOW);
+
         // Get recent blockhash
         let recent_blockhash = self.transaction_client.get_recent_blockhash().await
             .map_err(|e| StakingError::RpcError(format!("Failed to get recent blockhash: {}", e)))?;
 
-        // Create the base staking instructions
+        // Create the staking instructions with timeout FIRST
         let mut instructions = vec![
+            // 0. Timeout protection (FIRST)
+            timeout_ix,
+            
             // 1. Create stake account
             system_instruction::create_account(
                 &authority_pubkey,
                 &stake_account_pubkey,
                 rent_exemption + stake_amount_lamports,
                 200, // stake account size
-                &solana_sdk::stake::program::id(),
+                &Pubkey::from_str("Stake11111111111111111111111111111111111111").unwrap(),
             ),
             
             // 2. Initialize stake account
@@ -323,11 +338,13 @@ impl StakingClient {
             ),
         ];
 
-        // Apply Jito modifications if JitoTx is enabled
-        if jito_settings.jito_tx {
+        // Apply Jito modifications if JitoTx is enabled AND not using hardware wallet
+        if jito_settings.jito_tx && !is_hardware_wallet {
             println!("JitoTx is enabled, applying Jito modifications to staking transaction");
             self.apply_jito_modifications(&authority_pubkey, &mut instructions)
                 .map_err(|e| StakingError::TransactionFailed(format!("Failed to apply Jito modifications: {}", e)))?;
+        } else if is_hardware_wallet {
+            println!("Hardware wallet detected - skipping Jito tips");
         }
 
         // Create a message with all instructions
@@ -407,10 +424,12 @@ pub async fn create_stake_account(
 ) -> Result<StakeAccountInfo, StakingError> {
     let staking_client = StakingClient::new(rpc_url);
     
+    let is_hardware_wallet = hardware_wallet.is_some();
+    
     // Create the appropriate signer based on what's provided
-    let signer: Box<dyn TransactionSigner> = if let Some(hw) = hardware_wallet {
+    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
         // Create HardwareSigner from the HardwareWallet
-        Box::new(HardwareSigner::from_wallet(hw))
+        Box::new(HardwareSigner::from_wallet(hw.clone()))
     } else if let Some(w) = wallet_info {
         let wallet = Wallet::from_wallet_info(w)
             .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
@@ -420,7 +439,7 @@ pub async fn create_stake_account(
         return Err(StakingError::WalletError("No wallet or hardware wallet provided".to_string()));
     };
 
-    staking_client.create_stake_account_with_jito(signer.as_ref(), validator_vote_account, stake_amount_sol).await
+    staking_client.create_stake_account_with_jito(signer.as_ref(), validator_vote_account, stake_amount_sol, is_hardware_wallet).await
 }
 
 /// Convert RPC stake account data to DetailedStakeAccount format
@@ -641,8 +660,8 @@ pub async fn merge_stake_accounts(
     println!("🔄 MERGE OPERATION: Merging {} accounts", merge_group.accounts.len());
     
     // Create signer (reuse existing pattern)
-    let signer: Box<dyn TransactionSigner> = if let Some(hw) = hardware_wallet {
-        Box::new(HardwareSigner::from_wallet(hw))
+    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
+        Box::new(HardwareSigner::from_wallet(hw.clone()))
     } else if let Some(w) = wallet_info {
         let wallet = Wallet::from_wallet_info(w)
             .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
@@ -660,13 +679,30 @@ pub async fn merge_stake_accounts(
     // Build merge instructions
     let mut instructions = build_merge_transaction(merge_group, &authority_pubkey, rpc_url).await?;
 
-    // Apply Jito tips if enabled
+    // Get current slot and add timeout instruction (FIRST)
     let staking_client = StakingClient::new(rpc_url);
+    let current_slot = staking_client.transaction_client.get_current_slot().await
+        .map_err(|e| StakingError::RpcError(format!("Failed to get current slot: {}", e)))?;
+    let timeout_ix = timeout::build_timeout_instruction_from_current(
+        current_slot,
+        timeout::DEFAULT_SLOT_WINDOW,
+    )
+        .map_err(|e| StakingError::TransactionFailed(format!("Failed to build timeout instruction: {}", e)))?;
+    println!("Added timeout protection: current_slot={}, max_slot={}", 
+        current_slot, current_slot + timeout::DEFAULT_SLOT_WINDOW);
+    
+    // Prepend timeout instruction
+    instructions.insert(0, timeout_ix);
+
+    // Apply Jito tips if enabled AND not using hardware wallet
     let jito_settings = get_current_jito_settings();
-    if jito_settings.jito_tx {
-        println!("🚀 Applying Jito modifications");
+    let is_hardware_wallet = hardware_wallet.is_some();
+    if jito_settings.jito_tx && !is_hardware_wallet {
+        println!("Applying Jito modifications");
         staking_client.apply_jito_modifications(&authority_pubkey, &mut instructions)
             .map_err(|e| StakingError::TransactionFailed(format!("Jito error: {}", e)))?;
+    } else if is_hardware_wallet {
+        println!("Hardware wallet detected - skipping Jito tips");
     }
 
     // Create and sign transaction (reuse existing pattern)

@@ -4,7 +4,12 @@ use crate::hardware::HardwareWallet;
 use crate::validators::{ValidatorInfo, get_recommended_validators};
 use crate::staking::{self, DetailedStakeAccount, StakeAccountState};
 use crate::staking::{MergeGroup, MergeType};
-use crate::unstaking::{instant_unstake_stake_account, can_instant_unstake, normal_unstake_stake_account, can_normal_unstake};
+use crate::unstaking::{
+    instant_unstake_stake_account, can_instant_unstake, 
+    normal_unstake_stake_account, can_normal_unstake,
+    partial_unstake_stake_account, can_partial_unstake,
+    withdraw_stake_account, can_withdraw
+};
 use std::sync::Arc;
 use std::collections::HashMap;
 use crate::signing::hardware::HardwareSigner;
@@ -139,6 +144,137 @@ fn HardwareApprovalOverlay(oncancel: EventHandler<()>) -> Element {
 }
 
 /// Modal component to display staking success details
+/// Success modal for unstaking operations
+#[component]
+fn UnstakeSuccessModal(
+    signature: String,
+    operation: String, // "Instant Unstake", "Normal Unstake", or "Partial Unstake"
+    amount: f64,
+    was_hardware_wallet: bool,
+    onclose: EventHandler<()>,
+) -> Element {
+    // Explorer links - Solscan and Orb
+    let solscan_url = format!("https://solscan.io/tx/{}", signature);
+    let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
+    
+    rsx! {
+        div {
+            class: "modal-backdrop",
+            onclick: move |_| onclose.call(()),
+
+            div {
+                class: "modal-content",
+                onclick: move |e| e.stop_propagation(),
+
+                h2 { class: "modal-title", "{operation} Successful!" }
+
+                div {
+                    class: "tx-icon-container",
+                    div {
+                        class: "tx-success-icon",
+                        "✓"
+                    }
+                }
+
+                div {
+                    class: "success-message",
+                    "Your unstake transaction was submitted to the Solana network."
+                }
+
+                div {
+                    class: "stake-success-details",
+                    div {
+                        class: "stake-detail-card",
+                        div {
+                            class: "stake-detail-label",
+                            "Amount Unstaked:"
+                        }
+                        div {
+                            class: "stake-detail-value stake-amount",
+                            "{amount:.6} SOL"
+                        }
+                    }
+
+                    div {
+                        class: "stake-detail-card",
+                        div {
+                            class: "stake-detail-label",
+                            "Cooldown Period:"
+                        }
+                        div {
+                            class: "stake-detail-value",
+                            if operation == "Instant Unstake" {
+                                "✅ None (Instant)"
+                            } else {
+                                "⏳ 2-3 days"
+                            }
+                        }
+                    }
+                }
+
+                if was_hardware_wallet {
+                    div {
+                        class: "hardware-reconnect-notice",
+                        "Your hardware wallet has been disconnected after the transaction. You'll need to reconnect it for future operations."
+                    }
+                }
+
+                div {
+                    class: "transaction-details",
+                    div {
+                        class: "wallet-field",
+                        label { "Transaction Signature:" }
+                        div {
+                            class: "address-display",
+                            title: "Click to copy",
+                            onclick: move |_| {
+                                println!("Signature copied to clipboard: {}", signature);
+                            },
+                            "{signature}"
+                        }
+                        div {
+                            class: "copy-hint",
+                            "Click to copy"
+                        }
+                    }
+
+                    div {
+                        class: "explorer-links",
+                        p { "View transaction in explorer:" }
+
+                        div {
+                            class: "explorer-buttons",
+                            a {
+                                class: "button-standard ghost",
+                                href: "{solscan_url}",
+                                target: "_blank",
+                                rel: "noopener noreferrer",
+                                "Solscan"
+                            }
+                            a {
+                                class: "button-standard ghost",
+                                href: "{orb_url}",
+                                target: "_blank",
+                                rel: "noopener noreferrer",
+                                "Orb"
+                            }
+                        }
+                    }
+                }
+
+                div {
+                    class: "modal-buttons",
+                    button {
+                        class: "button-standard primary",
+                        onclick: move |_| onclose.call(()),
+                        "Close"
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[component]
 fn StakeSuccessModal(
     signature: String,
@@ -147,42 +283,34 @@ fn StakeSuccessModal(
     was_hardware_wallet: bool,
     onclose: EventHandler<()>,
 ) -> Element {
-    // Explorer links for multiple explorers
-    let solana_explorer_url = format!("https://explorer.solana.com/tx/{}", signature);
+    // Explorer links - Solscan and Orb
     let solscan_url = format!("https://solscan.io/tx/{}", signature);
-    let solana_fm_url = format!("https://solana.fm/tx/{}", signature);
+    let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
     
     rsx! {
         div {
             class: "modal-backdrop",
             onclick: move |_| onclose.call(()),
-            
+
             div {
                 class: "modal-content",
                 onclick: move |e| e.stop_propagation(),
-                
-                h2 { class: "modal-title", "Stake Account Created Successfully!" }
 
-                if was_hardware_wallet {
-                    div {
-                        class: "success-message",
-                        "🔐 Staking transaction completed successfully with your hardware wallet!"
-                    }
-                }
-                
+                h2 { class: "modal-title", "Stake Account Created Successfully! 🎉" }
+
                 div {
                     class: "tx-icon-container",
                     div {
                         class: "tx-success-icon stake-success",
-                        "🏛️" // Staking icon
+                        "✓"
                     }
                 }
-                
+
                 div {
                     class: "success-message",
                     "Your stake account was created and delegated to the validator."
                 }
-                
+
                 div {
                     class: "stake-success-details",
                     div {
@@ -196,7 +324,7 @@ fn StakeSuccessModal(
                             "{stake_amount:.6} SOL"
                         }
                     }
-                    
+
                     div {
                         class: "stake-detail-card",
                         div {
@@ -205,10 +333,10 @@ fn StakeSuccessModal(
                         }
                         div {
                             class: "stake-detail-value",
-                            "🏛️ {validator_name}"
+                            "{validator_name}"
                         }
                     }
-                    
+
                     div {
                         class: "stake-detail-card",
                         div {
@@ -221,60 +349,61 @@ fn StakeSuccessModal(
                         }
                     }
                 }
-                
+
+                if was_hardware_wallet {
+                    div {
+                        class: "hardware-reconnect-notice",
+                        "Your hardware wallet has been disconnected after the transaction. You'll need to reconnect it for future operations."
+                    }
+                }
+
                 div {
                     class: "transaction-details",
                     div {
                         class: "wallet-field",
                         label { "Transaction Signature:" }
-                        div { 
-                            class: "address-display", 
+                        div {
+                            class: "address-display",
                             title: "Click to copy",
                             onclick: move |_| {
                                 println!("Signature copied to clipboard: {}", signature);
                             },
                             "{signature}"
                         }
-                        div { 
+                        div {
                             class: "copy-hint",
                             "Click to copy"
                         }
                     }
-                    
+
                     div {
                         class: "explorer-links",
                         p { "View transaction in explorer:" }
-                        
+
                         div {
                             class: "explorer-buttons",
                             a {
-                                class: "explorer-button",
-                                href: "{solana_explorer_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Solana Explorer"
-                            }
-                            a {
-                                class: "explorer-button",
+                                class: "button-standard ghost",
                                 href: "{solscan_url}",
                                 target: "_blank",
                                 rel: "noopener noreferrer",
                                 "Solscan"
                             }
                             a {
-                                class: "explorer-button",
-                                href: "{solana_fm_url}",
+                                class: "button-standard ghost",
+                                href: "{orb_url}",
                                 target: "_blank",
                                 rel: "noopener noreferrer",
-                                "Solana FM"
+                                "Orb"
                             }
                         }
                     }
                 }
-                
-                div { class: "modal-buttons",
+
+                div {
+                    class: "modal-buttons",
                     button {
-                        class: "modal-button primary",
+                        class: "button-standard primary",
                         onclick: move |_| onclose.call(()),
                         "Close"
                     }
@@ -318,6 +447,19 @@ pub fn StakeModal(
 
     let instant_unstaking = use_signal(|| false);
     let normal_unstaking = use_signal(|| false);
+    let mut partial_unstaking = use_signal(|| false);
+    let mut withdrawing = use_signal(|| false);
+    
+    // Partial unstake modal state
+    let mut show_partial_unstake_modal = use_signal(|| false);
+    let mut partial_unstake_account = use_signal(|| None as Option<DetailedStakeAccount>);
+    let mut partial_unstake_amount = use_signal(|| "".to_string());
+    
+    // Unstake success modal states
+    let mut show_unstake_success_modal = use_signal(|| false);
+    let mut unstake_success_signature = use_signal(|| "".to_string());
+    let mut unstake_success_operation = use_signal(|| "".to_string());
+    let mut unstake_success_amount = use_signal(|| 0.0);
 
     // Load validators on component mount
     use_effect(move || {
@@ -434,32 +576,192 @@ pub fn StakeModal(
         }
     });
 
-    // Determine which address to show based on wallet type
-    let display_address = if let Some(hw) = &hardware_wallet {
-        let mut hw_address = use_signal(|| None as Option<String>);
 
-        let hw_clone = hardware_wallet.clone();
-        use_effect(move || {
-            if let Some(hw) = &hw_clone {
-                let hw = hw.clone();
-                spawn(async move {
-                    if let Ok(pubkey) = hw.get_public_key().await {
-                        hw_address.set(Some(pubkey));
-                    }
-                });
-            }
-        });
-        hw_address().unwrap_or_else(|| "Hardware Wallet".to_string())
-    } else if let Some(w) = &wallet {
-        w.address.clone()
-    } else {
-        "No Wallet".to_string()
-    };
 
     // Calculate total staked amount
     let total_staked = stake_accounts().iter()
         .map(|account| account.balance.saturating_sub(account.rent_exempt_reserve))
         .sum::<u64>() as f64 / 1_000_000_000.0;
+
+    // Show partial unstake modal if requested
+    if show_partial_unstake_modal() {
+        if let Some(account) = partial_unstake_account() {
+            let available_sol = (account.balance.saturating_sub(account.rent_exempt_reserve)) as f64 / 1_000_000_000.0;
+            
+            return rsx! {
+                div {
+                    class: "modal-backdrop",
+                    onclick: move |_| show_partial_unstake_modal.set(false),
+
+                    div {
+                        class: "modal-content",
+                        onclick: move |e| e.stop_propagation(),
+
+                        h2 { class: "modal-title", "Partial Unstake" }
+
+                        div {
+                            class: "modal-body",
+                            
+                            div {
+                                class: "wallet-field",
+                                label { "Available to Unstake:" }
+                                div { 
+                                    class: "balance-display", 
+                                    "{available_sol:.6} SOL" 
+                                }
+                            }
+
+                            div {
+                                class: "wallet-field",
+                                label { "Amount to Unstake (SOL):" }
+                                input {
+                                    class: "amount-input-field",
+                                    r#type: "number",
+                                    step: "0.000001",
+                                    min: "0.01",
+                                    max: "{available_sol}",
+                                    placeholder: "0.0",
+                                    value: "{partial_unstake_amount}",
+                                    oninput: move |e| {
+                                        partial_unstake_amount.set(e.value());
+                                    }
+                                }
+                                div {
+                                    class: "field-hint",
+                                    {
+                                        let avail = available_sol;
+                                        if let Ok(amount) = partial_unstake_amount().parse::<f64>() {
+                                            if amount > 0.0 && amount < avail {
+                                                let remaining = avail - amount;
+                                                format!("Remaining staked: {:.6} SOL", remaining)
+                                            } else {
+                                                "Enter amount between 0.01 and available balance".to_string()
+                                            }
+                                        } else {
+                                            "Enter amount between 0.01 and available balance".to_string()
+                                        }
+                                    }
+                                }
+                            }
+
+                            div {
+                                class: "info-message warning",
+                                "The unstaked portion will take 2-3 days to become available for withdrawal. The remaining stake will continue earning rewards."
+                            }
+                        }
+
+                        div {
+                            class: "modal-buttons",
+                            button {
+                                class: "button-standard secondary",
+                                onclick: move |_| show_partial_unstake_modal.set(false),
+                                "Cancel"
+                            }
+                            button {
+                                class: "button-standard primary",
+                                disabled: {
+                                    let amount_str = partial_unstake_amount();
+                                    if let Ok(amount) = amount_str.parse::<f64>() {
+                                        amount < 0.01 || amount > available_sol || partial_unstaking()
+                                    } else {
+                                        true
+                                    }
+                                },
+                                onclick: {
+                                    let account_clone = account.clone();
+                                    let wallet_for_partial = wallet.clone();
+                                    let hardware_wallet_for_partial = hardware_wallet.clone();
+                                    let custom_rpc_for_partial = custom_rpc.clone();
+                                    
+                                    move |_| {
+                                        let amount_str = partial_unstake_amount();
+                                        let amount = match amount_str.parse::<f64>() {
+                                            Ok(amt) if amt >= 0.01 && amt <= available_sol => amt,
+                                            _ => return,
+                                        };
+
+                                        println!("PARTIAL UNSTAKE: Starting for {} SOL from account {}", 
+                                            amount, account_clone.pubkey);
+                                        
+                                        partial_unstaking.set(true);
+                                        show_partial_unstake_modal.set(false);
+                                        
+                                        // Show hardware approval overlay if using hardware wallet
+                                        if hardware_wallet_for_partial.is_some() {
+                                            show_hardware_approval.set(true);
+                                        }
+                                        
+                                        let wallet_clone = wallet_for_partial.clone();
+                                        let hardware_wallet_clone = hardware_wallet_for_partial.clone();
+                                        let custom_rpc_clone = custom_rpc_for_partial.clone();
+                                        let account_async = account_clone.clone();
+                                        
+                                        let mut partial_unstaking_clone = partial_unstaking.clone();
+                                        let mut error_message_clone = error_message.clone();
+                                        let mut show_hardware_approval_clone = show_hardware_approval.clone();
+                                        let mut stake_accounts_clone = stake_accounts.clone();
+                                        
+                                        spawn(async move {
+                                            println!("PARTIAL UNSTAKE: Executing transaction...");
+                                            
+                                            match partial_unstake_stake_account(
+                                                &account_async,
+                                                amount,
+                                                wallet_clone.as_ref(),
+                                                hardware_wallet_clone,
+                                                custom_rpc_clone.as_deref(),
+                                            ).await {
+                                                Ok(signature) => {
+                                                    println!("✅ Partial unstake completed: {}", signature);
+                                                    
+                                                    show_hardware_approval_clone.set(false);
+                                                    stake_accounts_clone.set(Vec::new());
+                                                    
+                                                    // Show success modal
+                                                    unstake_success_signature.set(signature);
+                                                    unstake_success_operation.set("Partial Unstake".to_string());
+                                                    unstake_success_amount.set(amount);
+                                                    show_unstake_success_modal.set(true);
+                                                }
+                                                Err(e) => {
+                                                    println!("❌ Partial unstake error: {}", e);
+                                                    error_message_clone.set(Some(format!("Partial unstake failed: {}", e)));
+                                                    show_hardware_approval_clone.set(false);
+                                                }
+                                            }
+                                            
+                                            partial_unstaking_clone.set(false);
+                                        });
+                                    }
+                                },
+                                if partial_unstaking() {
+                                    "Processing..."
+                                } else {
+                                    "Partial Unstake"
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+    }
+
+    // Show unstake success modal if unstaking was successful
+    if show_unstake_success_modal() {
+        return rsx! {
+            UnstakeSuccessModal {
+                signature: unstake_success_signature(),
+                operation: unstake_success_operation(),
+                amount: unstake_success_amount(),
+                was_hardware_wallet: was_hardware_transaction(),
+                onclose: move |_| {
+                    show_unstake_success_modal.set(false);
+                    onsuccess.call(unstake_success_signature());
+                }
+            }
+        };
+    }
 
     // Show success modal if staking was successful
     if show_success_modal() {
@@ -504,15 +806,7 @@ pub fn StakeModal(
                 // Header with toggle
                 div {
                     class: "modal-header-with-toggle",
-                    h2 { 
-                        class: "modal-title",
-                        if mode() == ModalMode::Stake {
-                            "Stake SOL"
-                        } else {
-                            "My Staked Sol"
-                        }
-                    }
-                    
+
                     div {
                         class: "mode-toggle",
                         button {
@@ -533,6 +827,12 @@ pub fn StakeModal(
                             "My Staked Sol"
                         }
                     }
+                    
+                    button {
+                        class: "modal-close-button",
+                        onclick: move |_| onclose.call(()),
+                        "×"
+                    }
                 }
 
                 // Show error if any
@@ -549,11 +849,7 @@ pub fn StakeModal(
                     // Conditional content based on mode
                     if mode() == ModalMode::Stake {
                         // Original staking interface
-                        div {
-                            class: "wallet-field",
-                            label { "From Address:" }
-                            div { class: "address-display", "{display_address}" }
-                        }
+
 
                         div {
                             class: "wallet-field",
@@ -687,26 +983,6 @@ pub fn StakeModal(
                         // My Stakes interface with modern UI
                         div {
                             class: "stakes-overview-modern",
-                            
-                            // Compact summary header (replaces the old stakes-summary grid)
-                            div {
-                                class: "stakes-summary-compact",
-                                span { class: "summary-label", "TOTAL STAKED" }
-                                span { class: "summary-value", "{total_staked:.6} SOL" }
-                                span { class: "summary-label", "STAKE ACCOUNTS" }
-                                span { class: "summary-count", "{stake_accounts().len()}" }
-                            }
-
-                            // Merge info (only show if merges available)
-                            if !merge_groups().is_empty() {
-                                div {
-                                    class: "merge-simple-section",
-                                    div {
-                                        class: "merge-simple-info",
-                                        "🔗 Found {merge_groups().len()} merge opportunities to consolidate your stake accounts"
-                                    }
-                                }
-                            }
 
                             // Loading state (preserved)
                             if loading_stakes() {
@@ -733,12 +1009,44 @@ pub fn StakeModal(
                                         "You don't have any active stake accounts yet. Switch to 'Stake SOL' to create your first stake account."
                                     }
                                 }
-                            } 
+                            }
                             // Modern stake accounts list
                             else {
+                                // Summary Section
+                                div {
+                                    class: "stakes-summary-section",
+                                    div {
+                                        class: "stakes-summary-title",
+                                        "Total Staked"
+                                    }
+                                    div {
+                                        class: "stakes-summary-amount",
+                                        {
+                                            let total_staked: f64 = stake_accounts()
+                                                .iter()
+                                                .map(|account| (account.balance.saturating_sub(account.rent_exempt_reserve)) as f64 / 1_000_000_000.0)
+                                                .sum();
+                                            format!("{:.5} SOL", total_staked)
+                                        }
+                                    }
+                                    div {
+                                        class: "stakes-summary-accounts",
+                                        "Stake Accounts: {stake_accounts().len()}"
+                                    }
+                                }
+
+                                // Merge info (only show if merges available)
+                                // COMMENTED OUT: Merge feature disabled for now
+                                // if !merge_groups().is_empty() {
+                                //     div {
+                                //         class: "merge-info-banner",
+                                //         "🔗 {merge_groups().len()} merge opportunities available"
+                                //     }
+                                // }
+
                                 div {
                                     class: "stakes-list-modern",
-                                    
+
                                     for account in stake_accounts() {
                                         div {
                                             key: "{account.pubkey}",
@@ -857,10 +1165,84 @@ pub fn StakeModal(
                                                 }
                                             }
                                             
-                                            // Action buttons: Change copy to instant unstake (placeholder), keep normal unstake
+                                            // Action buttons: instant, partial, and normal unstake
                                             div {
                                                 class: "stake-actions-modern",
-                                                if account.state == StakeAccountState::Delegated {
+                                                // Show withdraw button for inactive accounts
+                                                if can_withdraw(&account) {
+                                                    button {
+                                                        class: "action-btn primary",
+                                                        disabled: withdrawing(),
+                                                        onclick: {
+                                                            let account_clone = account.clone();
+                                                            let wallet_for_withdraw = wallet.clone();
+                                                            let hardware_wallet_for_withdraw = hardware_wallet.clone();
+                                                            let custom_rpc_for_withdraw = custom_rpc.clone();
+                                                            
+                                                            let mut withdrawing_clone = withdrawing.clone();
+                                                            let mut error_message_clone = error_message.clone();
+                                                            let mut show_hardware_approval_clone = show_hardware_approval.clone();
+                                                            let mut stake_accounts_clone = stake_accounts.clone();
+                                                            
+                                                            move |_| {
+                                                                let withdraw_amount_sol = account_clone.balance as f64 / 1_000_000_000.0;
+                                                                println!("WITHDRAW: Starting for account {} ({:.6} SOL)", 
+                                                                    account_clone.pubkey, withdraw_amount_sol);
+                                                                
+                                                                withdrawing_clone.set(true);
+                                                                error_message_clone.set(None);
+                                                                
+                                                                if hardware_wallet_for_withdraw.is_some() {
+                                                                    show_hardware_approval_clone.set(true);
+                                                                }
+                                                                
+                                                                let wallet_clone = wallet_for_withdraw.clone();
+                                                                let hardware_wallet_clone = hardware_wallet_for_withdraw.clone();
+                                                                let custom_rpc_clone = custom_rpc_for_withdraw.clone();
+                                                                let account_async = account_clone.clone();
+                                                                
+                                                                spawn(async move {
+                                                                    println!("WITHDRAW: Executing transaction...");
+                                                                    
+                                                                    match withdraw_stake_account(
+                                                                        &account_async,
+                                                                        wallet_clone.as_ref(),
+                                                                        hardware_wallet_clone,
+                                                                        custom_rpc_clone.as_deref(),
+                                                                    ).await {
+                                                                        Ok(signature) => {
+                                                                            println!("✅ Withdraw completed: {}", signature);
+                                                                            
+                                                                            show_hardware_approval_clone.set(false);
+                                                                            stake_accounts_clone.set(Vec::new());
+                                                                            
+                                                                            // Show success modal
+                                                                            let withdraw_amount_sol = account_clone.balance as f64 / 1_000_000_000.0;
+                                                                            unstake_success_signature.set(signature);
+                                                                            unstake_success_operation.set("Withdraw".to_string());
+                                                                            unstake_success_amount.set(withdraw_amount_sol);
+                                                                            show_unstake_success_modal.set(true);
+                                                                        }
+                                                                        Err(e) => {
+                                                                            println!("❌ Withdraw error: {}", e);
+                                                                            error_message_clone.set(Some(format!("Withdraw failed: {}", e)));
+                                                                            show_hardware_approval_clone.set(false);
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    withdrawing_clone.set(false);
+                                                                });
+                                                            }
+                                                        },
+                                                        if withdrawing() {
+                                                            "⏳ Withdrawing..."
+                                                        } else {
+                                                            "💰 Withdraw"
+                                                        }
+                                                    }
+                                                }
+                                                // Show unstake buttons for active accounts
+                                                else if account.state == StakeAccountState::Delegated {
                                                     button {
                                                         class: "action-btn secondary",
                                                         disabled: instant_unstaking() || !can_instant_unstake(&account),
@@ -914,18 +1296,12 @@ pub fn StakeModal(
                                                                             // Clear stake accounts to trigger refresh
                                                                             stake_accounts_clone.set(Vec::new());
                                                                             
-                                                                            // Show success message
-                                                                            error_message_clone.set(Some(format!(
-                                                                                "✅ Instant unstake successful! Stake account transferred to pool and deactivated. Transaction: {}", 
-                                                                                signature
-                                                                            )));
-                                                                            
-                                                                            // Clear success message after 8 seconds
-                                                                            let mut error_message_clear = error_message_clone.clone();
-                                                                            spawn(async move {
-                                                                                tokio::time::sleep(std::time::Duration::from_millis(8_000)).await;
-                                                                                error_message_clear.set(None);
-                                                                            });
+                                                                            // Show success modal
+                                                                            let stake_balance_sol = (account_clone.balance.saturating_sub(account_clone.rent_exempt_reserve)) as f64 / 1_000_000_000.0;
+                                                                            unstake_success_signature.set(signature);
+                                                                            unstake_success_operation.set("Instant Unstake".to_string());
+                                                                            unstake_success_amount.set(stake_balance_sol);
+                                                                            show_unstake_success_modal.set(true);
                                                                         }
                                                                         Err(e) => {
                                                                             println!("❌ Instant unstake error: {}", e);
@@ -946,8 +1322,22 @@ pub fn StakeModal(
                                                     }
                                                     
                                                     button {
+                                                        class: "action-btn tertiary",
+                                                        disabled: partial_unstaking() || instant_unstaking() || normal_unstaking() || !can_partial_unstake(&account),
+                                                        onclick: {
+                                                            let account_clone = account.clone();
+                                                            move |_| {
+                                                                partial_unstake_account.set(Some(account_clone.clone()));
+                                                                partial_unstake_amount.set("".to_string());
+                                                                show_partial_unstake_modal.set(true);
+                                                            }
+                                                        },
+                                                        "📊 Partial"
+                                                    }
+                                                    
+                                                    button {
                                                         class: "action-btn primary",
-                                                        disabled: normal_unstaking() || instant_unstaking() || !can_normal_unstake(&account),
+                                                        disabled: normal_unstaking() || instant_unstaking() || partial_unstaking() || !can_normal_unstake(&account),
                                                         onclick: {
                                                             // Clone all necessary values for the async block (matching instant unstake pattern)
                                                             let account_clone = account.clone();
@@ -998,18 +1388,12 @@ pub fn StakeModal(
                                                                             // Clear stake accounts to trigger refresh
                                                                             stake_accounts_clone.set(Vec::new());
                                                                             
-                                                                            // Show success message
-                                                                            error_message_clone.set(Some(format!(
-                                                                                "✅ Normal unstake successful! Stake account has been deactivated and will be available for withdrawal after the cooldown period. Transaction: {}", 
-                                                                                signature
-                                                                            )));
-                                                                            
-                                                                            // Clear success message after 8 seconds
-                                                                            let mut error_message_clear = error_message_clone.clone();
-                                                                            spawn(async move {
-                                                                                tokio::time::sleep(std::time::Duration::from_millis(8_000)).await;
-                                                                                error_message_clear.set(None);
-                                                                            });
+                                                                            // Show success modal
+                                                                            let stake_balance_sol = (account_clone.balance.saturating_sub(account_clone.rent_exempt_reserve)) as f64 / 1_000_000_000.0;
+                                                                            unstake_success_signature.set(signature);
+                                                                            unstake_success_operation.set("Normal Unstake".to_string());
+                                                                            unstake_success_amount.set(stake_balance_sol);
+                                                                            show_unstake_success_modal.set(true);
                                                                         }
                                                                         Err(e) => {
                                                                             println!("❌ Normal unstake error: {}", e);
@@ -1040,15 +1424,10 @@ pub fn StakeModal(
 
                 div { 
                     class: "modal-buttons",
-                    button {
-                        class: "modal-button cancel",
-                        onclick: move |_| onclose.call(()),
-                        "Close"
-                    }
                     
                     if mode() == ModalMode::Stake {
                         button {
-                            class: "modal-button primary",
+                            class: "button-standard primary",
                             disabled: staking() || amount().is_empty() || amount().parse::<f64>().unwrap_or(0.0) < 0.01 || selected_validator().is_none(),
                             onclick: move |_| {
                                 error_message.set(None);
@@ -1121,68 +1500,9 @@ pub fn StakeModal(
                             }
                         }
                     } else {
-                        if !stake_accounts().is_empty() {
-                            button {
-                                class: "modal-button secondary",
-                                disabled: loading_stakes(),
-                                onclick: {
-                                    // Clone props outside the closure to avoid move issues
-                                    let wallet_for_refresh = wallet.clone();
-                                    let hardware_wallet_for_refresh = hardware_wallet.clone();
-                                    let custom_rpc_for_refresh = custom_rpc.clone();
-                                    
-                                    move |_| {
-                                        // Manually trigger refresh
-                                        loading_stakes.set(true);
-                                        error_message.set(None);
-                        
-                                        let wallet_clone = wallet_for_refresh.clone();
-                                        let hardware_wallet_clone = hardware_wallet_for_refresh.clone();
-                                        let custom_rpc_clone = custom_rpc_for_refresh.clone();
-                        
-                                        spawn(async move {
-                                            // Get wallet address
-                                            let wallet_address = if let Some(hw) = &hardware_wallet_clone {
-                                                match hw.get_public_key().await {
-                                                    Ok(addr) => addr,
-                                                    Err(e) => {
-                                                        error_message.set(Some(format!("Failed to get hardware wallet address: {}", e)));
-                                                        loading_stakes.set(false);
-                                                        return;
-                                                    }
-                                                }
-                                            } else if let Some(w) = &wallet_clone {
-                                                w.address.clone()
-                                            } else {
-                                                error_message.set(Some("No wallet available".to_string()));
-                                                loading_stakes.set(false);
-                                                return;
-                                            };
-                        
-                                            // Scan for stake accounts
-                                            match staking::scan_stake_accounts(&wallet_address, custom_rpc_clone.as_deref()).await {
-                                                Ok(accounts) => {
-                                                    println!("✅ Refreshed: Found {} stake accounts", accounts.len());
-                                                    stake_accounts.set(accounts);
-                                                    loading_stakes.set(false);
-                                                }
-                                                Err(e) => {
-                                                    println!("❌ Refresh error: {}", e);
-                                                    error_message.set(Some(format!("Failed to refresh: {}", e)));
-                                                    loading_stakes.set(false);
-                                                }
-                                            }
-                                        });
-                                    }
-                                },
-                                if loading_stakes() {
-                                    "🔄 Refreshing..."
-                                } else {
-                                    "🔄 Refresh"
-                                }
-                            }
-                        }
-                        if mode() == ModalMode::MyStakes && !merge_groups().is_empty() {
+                        // COMMENTED OUT: Merge button disabled for now
+                        // Show merge button at bottom for My Staked Sol view
+                        if false && mode() == ModalMode::MyStakes && !merge_groups().is_empty() {
                             button {
                                 class: "modal-button merge-simple",
                                 disabled: merging(),

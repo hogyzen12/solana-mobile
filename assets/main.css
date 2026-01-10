@@ -153,6 +153,22 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 20px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Prevent flex from affecting absolutely positioned indicator */
+.profile-icon > .hardware-indicator {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    margin: 0 !important;
+    flex: none !important;
+    display: block !important;
 }
 
 .menu-icon {
@@ -586,6 +602,287 @@ body {
     border-radius: 50%;
 }
 
+/* --- Liquid Metal Hardware Button --- */
+:root {
+    --shadow: rgba(0, 0, 0, 0.28);
+    --shadow2: rgba(0, 0, 0, 0.14);
+}
+
+.ball {
+    --size: 68px;
+    --accent: 165 170 178;
+    --accent-strong: 235 238 245;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 999px;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+    filter: drop-shadow(0 26px 26px rgba(0, 0, 0, 0.22));
+}
+
+.ball::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border-radius: 999px;
+    background: radial-gradient(circle,
+        rgba(var(--accent), 0.22) 0%,
+        rgba(var(--accent), 0.10) 45%,
+        rgba(var(--accent), 0) 70%
+    );
+    opacity: 0.95;
+    pointer-events: none;
+}
+
+.ball .core {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 30% 25%,
+            rgba(255, 255, 255, 0.98) 0%,
+            rgba(255, 255, 255, 0.72) 20%,
+            rgba(215, 218, 224, 0.62) 52%,
+            rgba(165, 170, 180, 0.72) 78%,
+            rgba(140, 144, 152, 0.92) 100%
+        );
+    box-shadow:
+        0 18px 40px var(--shadow),
+        0 8px 16px var(--shadow2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        inset 0 -12px 18px rgba(0, 0, 0, 0.16);
+}
+
+.ball .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        radial-gradient(farthest-side,
+            rgba(0, 0, 0, 0) calc(100% - 15px),
+            rgba(var(--accent), 0.30) calc(100% - 14px),
+            rgba(var(--accent-strong), 0.98) calc(100% - 10px),
+            rgba(var(--accent), 0.30) calc(100% - 6px),
+            rgba(0, 0, 0, 0) 100%
+        );
+    filter: blur(0.6px);
+    opacity: 0.98;
+    mix-blend-mode: screen;
+}
+
+.ball .rim {
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        conic-gradient(from 240deg,
+            rgba(255, 255, 255, 0.96) 0deg,
+            rgba(255, 255, 255, 0.22) 34deg,
+            rgba(0, 0, 0, 0.35) 92deg,
+            rgba(255, 255, 255, 0.92) 148deg,
+            rgba(255, 60, 190, 0.20) 166deg,
+            rgba(60, 220, 255, 0.20) 190deg,
+            rgba(255, 220, 60, 0.20) 214deg,
+            rgba(255, 255, 255, 0.90) 262deg,
+            rgba(0, 0, 0, 0.30) 308deg,
+            rgba(255, 255, 255, 0.96) 360deg
+        );
+    -webkit-mask: radial-gradient(farthest-side,
+        transparent calc(100% - 7px),
+        #000 calc(100% - 6px)
+    );
+            mask: radial-gradient(farthest-side,
+        transparent calc(100% - 7px),
+        #000 calc(100% - 6px)
+    );
+    filter: blur(0.18px);
+    opacity: 0.98;
+    transform-origin: 50% 50%;
+}
+
+.ball .cup {
+    position: absolute;
+    inset: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(circle at 50% 65%,
+            rgba(var(--accent-strong), 0.22) 0%,
+            rgba(var(--accent), 0.10) 44%,
+            rgba(var(--accent), 0) 70%
+        ),
+        radial-gradient(circle at 35% 30%,
+            rgba(255, 255, 255, 0.90) 0%,
+            rgba(255, 255, 255, 0.36) 28%,
+            rgba(0, 0, 0, 0.10) 62%,
+            rgba(0, 0, 0, 0.18) 100%
+        );
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        inset 0 -12px 18px rgba(0, 0, 0, 0.18);
+}
+
+.ball .shine {
+    position: absolute;
+    inset: -40%;
+    border-radius: 999px;
+    pointer-events: none;
+    background: radial-gradient(circle at 30% 30%,
+        rgba(255, 255, 255, 0.92) 0%,
+        rgba(255, 255, 255, 0.40) 18%,
+        rgba(255, 255, 255, 0) 52%
+    );
+    filter: blur(10px);
+    mix-blend-mode: screen;
+    opacity: 0.9;
+    transform: rotate(12deg) translate3d(0, 0, 0);
+}
+
+.ball .led {
+    position: absolute;
+    right: 13px;
+    bottom: 13px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 35% 30%,
+            rgba(255, 255, 255, 0.98) 0%,
+            rgba(255, 255, 255, 0.28) 22%,
+            rgba(var(--accent-strong), 0.98) 58%,
+            rgba(var(--accent), 0.88) 100%
+        );
+    box-shadow:
+        0 0 18px rgba(var(--accent), 0.74),
+        0 0 34px rgba(var(--accent), 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+}
+
+.ball svg {
+    width: 26px;
+    height: 26px;
+    filter: drop-shadow(0 7px 12px rgba(0, 0, 0, 0.30));
+    opacity: 0.95;
+}
+
+.ball:hover .core {
+    box-shadow:
+        0 20px 44px rgba(0, 0, 0, 0.26),
+        0 10px 18px rgba(0, 0, 0, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        inset 0 -12px 18px rgba(0, 0, 0, 0.16);
+}
+
+.ball:active {
+    transform: translateY(1px);
+}
+
+.ball:focus-visible {
+    outline: 3px solid rgba(var(--accent), 0.65);
+    outline-offset: 6px;
+}
+
+.ball.is-animated .rim {
+    animation: rimRotate 10s linear infinite;
+}
+
+.ball.is-animated .shine {
+    animation: shineGlide 6.8s ease-in-out infinite;
+}
+
+@keyframes rimRotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes shineGlide {
+    0% {
+        transform: rotate(12deg) translate(-6%, -4%);
+        opacity: 0.82;
+    }
+    45% {
+        transform: rotate(18deg) translate(10%, 2%);
+        opacity: 0.95;
+    }
+    100% {
+        transform: rotate(12deg) translate(-6%, -4%);
+        opacity: 0.82;
+    }
+}
+
+.ball.is-neutral {
+    --accent: 165 170 178;
+    --accent-strong: 235 238 245;
+}
+
+.ball.is-warn {
+    --accent: 245 186 64;
+    --accent-strong: 255 236 165;
+}
+
+.ball.is-ok {
+    --accent: 78 208 128;
+    --accent-strong: 190 255 220;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ball.is-animated .rim,
+    .ball.is-animated .shine {
+        animation: none;
+    }
+}
+
+/* Hardware button layout helpers */
+.hardware-button-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.hardware-wallet-button {
+    --size: 48px;
+    padding: 0;
+}
+
+.hardware-wallet-button .cup img,
+.hardware-wallet-button .cup svg {
+    width: 24px;
+    height: 24px;
+}
+
+@media (max-width: 768px) {
+    .hardware-button-wrapper {
+        width: 40px;
+        height: 40px;
+    }
+
+    .hardware-wallet-button {
+        --size: 40px;
+    }
+
+    .hardware-wallet-button .cup img,
+    .hardware-wallet-button .cup svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
 /* Add to main.css */
 
 /* Wallet management in dropdown */
@@ -614,35 +911,39 @@ body {
     background-color: #1f2937;
 }
 
-/* Modal styles */
+/* Modal styles - Updated to match onboarding theme */
 .modal-backdrop {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.95);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
+    backdrop-filter: blur(4px);
 }
 
 .modal-content {
-    background-color: #1f2937;
-    border-radius: 16px;
-    padding: 24px;
+    background-color: #2C2C2C;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 28px;
     width: 90%;
-    max-width: 480px;
+    max-width: 450px;
     max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
 }
 
 .modal-title {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    color: white;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 0;
+    color: #ffffff;
+    text-align: center;
 }
 
 .wallet-field {
@@ -651,33 +952,44 @@ body {
 
 .wallet-field label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     color: #9ca3af;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.field-hint {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #8a8a8a;
+    line-height: 1.4;
 }
 
 .wallet-field input,
 .wallet-field textarea {
     width: 100%;
-    padding: 12px;
-    background-color: #0a0a0a;
-    border: 1px solid #2a2a2a;
-    border-radius: 8px;
+    padding: 14px 16px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
     color: white;
-    font-size: 16px;
-    box-sizing: border-box; /* Add this to prevent overflow */
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
 }
 
 /* Special styling for recipient address input to match address display */
 .wallet-field input[placeholder="Enter Solana address"] {
     font-family: monospace;
-    font-size: 11.5px; /* Match address display font size */
+    font-size: 11.5px;
 }
 
 .wallet-field input:focus,
 .wallet-field textarea:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #6a6a6a;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+    background-color: #1a1a1a;
 }
 
 .wallet-field textarea {
@@ -689,19 +1001,19 @@ body {
 
 .address-display,
 .private-key-display {
-    width: 100%; /* Ensure full width */
-    padding: 12px;
-    background-color: #0a0a0a;
-    border: 1px solid #2a2a2a; /* Add border to match inputs */
-    border-radius: 8px;
+    width: 100%;
+    padding: 14px 16px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
     color: white;
     font-family: monospace;
-    font-size: 11.5px; /* Smaller font to fit on one line */
-    word-break: keep-all; /* Prevent breaking */
-    white-space: nowrap; /* Keep on single line */
-    overflow: hidden; /* Hide overflow */
-    text-overflow: ellipsis; /* Show ... for overflow */
-    box-sizing: border-box; /* Add this to prevent overflow */
+    font-size: 12px;
+    word-break: keep-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
 }
 
 .private-key-warning {
@@ -716,50 +1028,63 @@ body {
 
 .show-key-button {
     padding: 8px 16px;
-    background-color: #6366f1;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: white;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
 }
 
 .show-key-button:hover {
-    background-color: #4f46e5;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .modal-buttons {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    margin-top: 24px;
+    margin-top: 28px;
 }
 
 .modal-button {
-    padding: 12px 24px;
-    border-radius: 8px;
+    padding: 14px 24px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    width: 100%;
 }
 
 .modal-button.cancel {
-    background-color: #374151;
+    background-color: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2);
     color: white;
 }
 
 .modal-button.cancel:hover {
-    background-color: #4b5563;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .modal-button.primary {
-    background-color: #6366f1;
-    color: white;
+    background: white;
+    color: #1a1a1a;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .modal-button.primary:hover {
-    background-color: #4f46e5;
+    background: #f0f0f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .generated-wallet {
@@ -821,13 +1146,10 @@ body {
 .dropdown-item.current-wallet .dropdown-icon.wallet-icon {
     width: 32px;
     height: 32px;
-    background-color: #FF6B9D;
-    border-radius: 50%;
-    font-size: 16px;
+    background-color: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
 }
 
 /* Current wallet text info */
@@ -874,9 +1196,16 @@ body {
 .wallet-list-item .dropdown-icon {
     width: 32px;
     height: 32px;
-    background-color: #FF6B9D;
-    border-radius: 50%;
-    font-size: 16px;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wallet-list-item .dropdown-icon img,
+.dropdown-item.current-wallet .dropdown-icon.wallet-icon img,
+.dropdown-icon.action-icon img {
+    filter: brightness(0) invert(1);
 }
 
 .wallet-info {
@@ -958,23 +1287,25 @@ body {
 
 /* Additional modal styles */
 .error-message {
-    padding: 12px;
-    background-color: #7f1d1d;
+    padding: 12px 16px;
+    background-color: rgba(220, 38, 38, 0.1);
     border: 1px solid #dc2626;
     color: #fca5a5;
-    border-radius: 8px;
+    border-radius: 10px;
     margin-bottom: 16px;
-    font-size: 14px;
+    font-size: 13px;
+    text-align: center;
 }
 
 .info-message {
     padding: 12px;
-    background-color: #1e3a8a;
-    border: 1px solid #3b82f6;
-    color: #93c5fd;
+    background-color: transparent;
+    border: none;
+    color: #8a8a8a;
     border-radius: 8px;
-    margin-top: 16px;
-    font-size: 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    text-align: center;
 }
 
 .copy-hint {
@@ -989,8 +1320,86 @@ body {
     cursor: not-allowed;
 }
 
-.modal-button:disabled:hover {
-    background-color: #6366f1;
+.modal-button.primary:disabled:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    transform: none;
+    box-shadow: none;
+}
+
+/* Privacy toggle styling for send modal */
+.privacy-field {
+    margin-top: 6px;
+}
+.privacy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.privacy-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #e6e6e6;
+}
+.privacy-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+}
+.privacy-toggle {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    display: inline-block;
+}
+.privacy-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.privacy-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    transition: background 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.privacy-slider::before {
+    content: "";
+    position: absolute;
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    top: 2px;
+    background: #f4f4f4;
+    border-radius: 999px;
+    transition: transform 0.2s ease;
+}
+.privacy-toggle input:checked + .privacy-slider {
+    background: linear-gradient(135deg, #3a6ff7 0%, #6ad3ff 100%);
+    border-color: rgba(106, 211, 255, 0.5);
+}
+.privacy-toggle input:checked + .privacy-slider::before {
+    transform: translateX(22px);
+}
+.privacy-meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+.privacy-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .key-format-info {
@@ -1020,12 +1429,14 @@ body {
 
 /* RPC modal button styles */
 .modal-button.secondary {
-    background-color: #4b5563;
+    background-color: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2);
     color: white;
 }
 
 .modal-button.secondary:hover {
-    background-color: #6b7280;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .modal-button:disabled {
@@ -1052,13 +1463,13 @@ body {
 /* Send Modal styles */
 .balance-display {
     width: 100%; /* Ensure full width */
-    padding: 12px;
-    background-color: #0a0a0a;
-    border: 1px solid #2a2a2a; /* Add border to match other fields */
-    border-radius: 8px;
-    color: #fbbf24;
+    padding: 14px 16px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
+    color: white;
     font-family: monospace;
-    font-size: 16px;
+    font-size: 15px;
     text-align: center;
     box-sizing: border-box; /* Add this to prevent overflow */
 }
@@ -1106,7 +1517,8 @@ body {
 /* Hardware wallet indicator styles */
 .profile-icon {
     position: relative;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
 }
 
 .profile-icon.connected {
@@ -1128,59 +1540,223 @@ body {
 .profile-icon {
     position: relative;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 .profile-icon.hardware-present {
     cursor: pointer;
+    animation: icon-pulse 1.5s ease-in-out infinite;
+}
+
+/* Force indicator positioning when device is detected - CATCHES ALL STATES */
+.profile-icon.hardware-present > .hardware-indicator,
+.profile-icon.hardware-present > .hardware-indicator.default,
+.profile-icon.hardware-present > .hardware-indicator.present,
+.profile-icon.hardware-present > .hardware-indicator.connected {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
+    contain: layout style paint !important;
 }
 
 .profile-icon.hardware-connected {
     cursor: default;
 }
 
+/* Force indicator positioning when device is connected - CATCHES ALL STATES */
+.profile-icon.hardware-connected > .hardware-indicator,
+.profile-icon.hardware-connected > .hardware-indicator.default,
+.profile-icon.hardware-connected > .hardware-indicator.present,
+.profile-icon.hardware-connected > .hardware-indicator.connected {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
+    contain: layout style paint !important;
+}
+
 .profile-icon:hover {
     transform: scale(1.05);
 }
 
-/* Hardware status indicator dot */
+/* Ensure indicator child doesn't inherit transforms */
+.profile-icon .hardware-indicator {
+    transform: none !important;
+}
+
+/* ABSOLUTE CATCH-ALL: Any indicator in profile-icon, any state, any time */
+.profile-icon > div.hardware-indicator,
+.profile-icon > .hardware-indicator {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
+    contain: layout style paint !important;
+}
+
+/* Hardware status indicator dot - ABSOLUTELY LOCKED */
 .hardware-indicator {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    bottom: -2px;
-    right: -2px;
-    border: 2px solid #0f0f0f;
-    transition: background-color 0.3s ease;
+    position: absolute !important;
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    border: 2px solid #0f0f0f !important;
+    transition-property: background-color, box-shadow !important;
+    transition-duration: 0.3s, 0.3s !important;
+    transition-timing-function: ease, ease !important;
+    transition-delay: 0s, 0s !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    contain: layout style paint !important;
 }
 
 /* Default state - always visible, grey when no hardware */
 .hardware-indicator.default {
-    background-color: #4b5563;  /* Grey - no device present */
+    background-color: #4b5563 !important;  /* Grey - no device present */
+}
+
+/* Nuclear option: Force positioning in default state */
+.profile-icon > .hardware-indicator.default {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
 }
 
 .hardware-indicator.present {
-    background-color: #fbbf24;  /* Yellow - device present but not connected */
-    animation: pulse 2s ease-in-out infinite;
+    background-color: #fde047 !important;  /* Brighter Yellow - device present but not connected */
+    animation: pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(253, 224, 71, 0.6) !important;
+}
+
+/* Nuclear option: Force positioning when both classes are present */
+.profile-icon.hardware-present > .hardware-indicator.present {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
 }
 
 .hardware-indicator.connected {
-    background-color: #10b981;  /* Green - device connected */
+    background-color: #10b981 !important;  /* Green - device connected */
     animation: none;
 }
 
-/* Pulse animation for present but not connected state */
+/* Nuclear option: Force positioning when device is connected */
+.profile-icon.hardware-connected > .hardware-indicator.connected {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
+}
+
+/* Pulse animation for present but not connected state - Enhanced */
 @keyframes pulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+        box-shadow: 0 0 0 0 rgba(253, 224, 71, 0.8), 0 0 8px rgba(253, 224, 71, 0.6);
     }
-    70% {
-        box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+    50% {
+        box-shadow: 0 0 0 8px rgba(253, 224, 71, 0.4), 0 0 12px rgba(253, 224, 71, 0.8);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+        box-shadow: 0 0 0 14px rgba(253, 224, 71, 0), 0 0 8px rgba(253, 224, 71, 0.6);
     }
+}
+
+/* Pulse animation for the profile icon when hardware is present */
+@keyframes icon-pulse {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.15);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* FINAL NUCLEAR OVERRIDE: Catches transition moment from default to present */
+div.profile-icon > div.hardware-indicator,
+div.profile-icon.hardware-present > div.hardware-indicator,
+div.profile-icon.hardware-present > div.hardware-indicator.default,
+div.profile-icon.hardware-present > div.hardware-indicator.present,
+div.profile-icon.hardware-connected > div.hardware-indicator,
+div.profile-icon.hardware-connected > div.hardware-indicator.connected {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    flex: none !important;
+    display: block !important;
+    transform: none !important;
+    contain: layout style paint !important;
 }
 
 /* Hardware wallet items in dropdown */
@@ -1215,21 +1791,20 @@ body {
     background-color: #b91c1c;
 }
 
-/* Profile icon states */
+/* Profile icon states - use box-shadow instead of border to avoid layout shift */
 .profile-icon.hardware-connected {
-    border: 2px solid #10b981;
-    border-radius: 50%;
+    box-shadow: 0 0 0 2px #10b981;
 }
 
 /* Recipient balance display */
 .recipient-balance {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #10b981;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #8a8a8a;
 }
 
 .recipient-balance.checking {
-    color: #fbbf24;
+    color: #9ca3af;
 }
 
 /* Main content section */
@@ -1401,7 +1976,7 @@ body {
 .qr-code-container {
     display: flex;
     justify-content: center;
-    margin: 24px 0;
+    margin: 28px 0;
 }
 
 .qr-code {
@@ -1409,8 +1984,8 @@ body {
     height: 200px;
     background: white;
     padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .qr-code svg {
@@ -1420,9 +1995,9 @@ body {
 
 .wallet-label {
     text-align: center;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
-    color: #ffffff;
+    color: #9ca3af;
     margin-bottom: 16px;
 }
 
@@ -1433,57 +2008,59 @@ body {
 .address-display-full {
     display: flex;
     align-items: center;
-    background-color: #0a0a0a;
-    border: 1px solid #2a2a2a;
-    border-radius: 8px;
-    padding: 12px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
+    padding: 14px 16px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .address-display-full:hover {
-    background-color: #1a1a1a;
-    border-color: #3a3a3a;
+    background-color: #222222;
+    border-color: #5a5a5a;
 }
 
 .address-text {
     flex: 1;
     font-family: monospace;
-    font-size: 13px;
+    font-size: 12px;
     color: #ffffff;
     word-break: break-all;
     margin-right: 12px;
 }
 
 .copy-button {
-    background-color: #6366f1;
-    color: white;
+    background-color: white;
+    color: #1a1a1a;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
 
 .copy-button:hover {
-    background-color: #4f46e5;
+    background-color: #f0f0f0;
+    transform: translateY(-1px);
 }
 
 .receive-info {
     margin: 24px 0;
     padding: 16px;
-    background-color: #1e3a8a;
-    border-radius: 8px;
+    background-color: transparent;
+    border-radius: 12px;
 }
 
 .receive-info p {
     margin: 8px 0;
-    color: #93c5fd;
-    font-size: 14px;
-    line-height: 1.5;
+    color: #8a8a8a;
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
 }
 
 .receive-info p:first-child {
@@ -1497,7 +2074,8 @@ body {
 .hardware-info {
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px solid #3b82f6;
+    border-top: 1px solid #3a3a3a;
+    color: #9ca3af;
 }
 
 .current-address-section {
@@ -1739,23 +2317,30 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #2a2a2a;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 24px;
+    position: relative;
 }
 
 .modal-close-button {
     background: none;
     border: none;
-    color: #9ca3af;
-    font-size: 24px;
+    color: white;
+    font-size: 28px;
     cursor: pointer;
     padding: 0;
     margin: 0;
+    transition: all 0.2s ease;
+    position: absolute;
+    right: 0;
+    top: 0;
+    line-height: 1;
 }
 
 .modal-close-button:hover {
-    color: #ffffff;
+    color: #d0d0d0;
+    transform: scale(1.05);
 }
 
 .transaction-address {
@@ -2454,10 +3039,10 @@ input:checked + .toggle-slider:before {
 
 .validator-dropdown-button {
     width: 100%;
-    padding: 12px 16px;
-    background-color: #1f2937;
-    border: 1px solid #374151;
-    border-radius: 8px;
+    padding: 14px 16px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
     color: white;
     cursor: pointer;
     display: flex;
@@ -2468,8 +3053,8 @@ input:checked + .toggle-slider:before {
 }
 
 .validator-dropdown-button:hover {
-    background-color: #374151;
-    border-color: #6366f1;
+    background-color: #222222;
+    border-color: #5a5a5a;
 }
 
 .selected-validator {
@@ -2506,25 +3091,25 @@ input:checked + .toggle-slider:before {
     top: 100%;
     left: 0;
     right: 0;
-    background-color: #1f2937;
-    border: 1px solid #374151;
-    border-radius: 8px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
     max-height: 300px;
     overflow-y: auto;
     z-index: 1000;
-    margin-top: 4px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    margin-top: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .validator-option {
     padding: 12px 16px;
     cursor: pointer;
-    border-bottom: 1px solid #374151;
+    border-bottom: 1px solid #2a2a2a;
     transition: background-color 0.2s ease;
 }
 
 .validator-option:hover {
-    background-color: #374151;
+    background-color: #2a2a2a;
 }
 
 .validator-option:last-child {
@@ -2545,11 +3130,11 @@ input:checked + .toggle-slider:before {
 }
 
 .validator-commission {
-    background-color: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: #10b981;
-    padding: 2px 6px;
-    border-radius: 4px;
+    background-color: #2a2a2a;
+    border: 1px solid #4a4a4a;
+    color: #ffffff;
+    padding: 4px 8px;
+    border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
 }
@@ -2560,9 +3145,20 @@ input:checked + .toggle-slider:before {
     margin-bottom: 4px;
 }
 
+.validator-description-text {
+    font-size: 12px;
+    color: #d1d5db;
+    margin-bottom: 6px;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+}
+
 .validator-stats {
     font-size: 11px;
     color: #9ca3af;
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 /* Field Hint for minimum stake */
@@ -2587,25 +3183,25 @@ input:checked + .toggle-slider:before {
 }
 
 .info-message.warning {
-    background-color: #451a03;
-    border: 1px solid #d97706;
-    color: #fbbf24;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    color: #9ca3af;
 }
 
 .info-message:not(.warning) {
-    background-color: #1e3a8a;
-    border: 1px solid #3b82f6;
-    color: #bfdbfe;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    color: #9ca3af;
 }
 
 /* Force the amount input to match balance display exactly */
 .amount-input-field {
     width: 100% !important;
-    padding: 12px !important;
-    background-color: #0a0a0a !important;
-    border: 1px solid #374151 !important;
-    border-radius: 8px !important;
-    color: #fbbf24 !important;
+    padding: 14px 16px !important;
+    background-color: #1a1a1a !important;
+    border: 1.5px solid #4a4a4a !important;
+    border-radius: 12px !important;
+    color: white !important;
     font-family: monospace !important;
     font-size: 16px !important;
     text-align: left !important;
@@ -2614,8 +3210,9 @@ input:checked + .toggle-slider:before {
 
 .amount-input-field:focus {
     outline: none !important;
-    border-color: #6366f1 !important;
-    background-color: #0a0a0a !important;
+    border-color: #6a6a6a !important;
+    background-color: #1a1a1a !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05) !important;
 }
 
 .amount-input-field::placeholder {
@@ -2629,40 +3226,43 @@ input:checked + .toggle-slider:before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #374151;
+    margin-bottom: 24px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .mode-toggle {
     display: flex;
-    background-color: #1f2937;
-    border-radius: 8px;
-    padding: 2px;
-    border: 1px solid #374151;
+    background-color: #1a1a1a;
+    border-radius: 12px;
+    padding: 4px;
+    border: 1.5px solid #4a4a4a;
+    gap: 4px;
 }
 
 .toggle-button {
-    padding: 8px 16px;
+    padding: 10px 20px;
     background: transparent;
     border: none;
     color: #9ca3af;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
 }
 
 .toggle-button.active {
-    background-color: #6366f1;
-    color: white;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    color: #1a1a1a;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
 }
 
 .toggle-button:hover:not(.active) {
     color: #d1d5db;
-    background-color: #374151;
+    background-color: #2a2a2a;
 }
 
 /* Staking Success Modal */
@@ -3408,10 +4008,26 @@ input:checked + .toggle-slider:before {
 .profile-icon {
     position: relative;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
     flex-shrink: 0;
     width: 32px;
     height: 32px;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+/* Prevent flex from affecting absolutely positioned indicator - mobile */
+.profile-icon > .hardware-indicator {
+    position: absolute !important;
+    top: auto !important;
+    right: -2px !important;
+    bottom: -2px !important;
+    left: auto !important;
+    align-self: initial !important;
+    justify-self: initial !important;
+    margin: 0 !important;
+    flex: none !important;
+    display: block !important;
 }
 
 .profile-icon img {
@@ -3443,43 +4059,6 @@ input:checked + .toggle-slider:before {
     content: '☰';
     color: white;
     font-size: 16px;
-}
-
-.hardware-indicator {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    bottom: -1px;
-    right: -1px;
-    border: 1px solid #0f0f0f;
-    transition: background-color 0.3s ease;
-}
-
-.hardware-indicator.default {
-    background-color: #4b5563;
-}
-
-.hardware-indicator.present {
-    background-color: #fbbf24;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.hardware-indicator.connected {
-    background-color: #10b981;
-    animation: none;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 6px rgba(251, 191, 36, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
-    }
 }
 
 /* Clean fix for Send Modal field sizing - replace existing rules */
@@ -3524,13 +4103,13 @@ input:checked + .toggle-slider:before {
 /* Update the .balance-display rule to match other fields */
 .balance-display {
     width: 100%; /* Ensure full width */
-    padding: 12px;
-    background-color: #0a0a0a;
-    border: 1px solid #2a2a2a; /* Add border to match other fields */
-    border-radius: 8px;
-    color: #fbbf24;
+    padding: 14px 16px;
+    background-color: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
+    color: white;
     font-family: monospace;
-    font-size: 16px;
+    font-size: 15px;
     text-align: center;
     box-sizing: border-box; /* Add this to prevent overflow */
 }
@@ -3894,16 +4473,16 @@ body:has(.token-item-selected) .token-item:hover {
 
 /* Recipient balance display */
 .recipient-balance {
-    margin-top: 4px;
-    padding: 4px 8px;
-    background-color: #1f2937;
-    border-radius: 4px;
-    font-size: 12px;
-    color: #9ca3af;
+    margin-top: 6px;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+    font-size: 11px;
+    color: #8a8a8a;
 }
 
 .recipient-balance.checking {
-    color: #fbbf24;
+    color: #9ca3af;
     font-style: italic;
 }
 
@@ -4987,7 +5566,7 @@ body:has(.token-item-selected) .token-item:hover {
 .modal-close-button {
     background: none;
     border: none;
-    color: #9ca3af;
+    color: rgba(255, 255, 255, 0.7);
     font-size: 24px;
     cursor: pointer;
     padding: 4px;
@@ -4996,8 +5575,9 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .modal-close-button:hover {
-    background-color: #374151;
-    color: #ffffff;
+    color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+    transform: scale(1.1);
 }
 
 .modal-body {
@@ -6109,30 +6689,31 @@ body:has(.token-item-selected) .token-item:hover {
 /* Add these new styles for the modal structure */
 
 .modal-content.stake-modal {
-    width: 90vw;
-    max-width: 400px;
-    height: 80vh;
-    max-height: 800px; /* Prevent overly tall modals on large screens */
+    width: 92vw;
+    max-width: 480px;
+    height: 82vh;
+    max-height: 820px; /* Prevent overly tall modals on large screens */
     display: flex;
     flex-direction: column;
-    background: #111827; /* Assuming dark theme from screenshot */
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: #2C2C2C;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
     overflow: hidden; /* Prevent content from spilling out */
     box-sizing: border-box;
 }
 
 .modal-header-with-toggle {
     flex: 0 0 auto;
-    padding: 12px 16px 0;
-    border-bottom: 1px solid #374151;
-    padding-bottom: 8px;
+    padding: 16px 24px 0;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 16px;
 }
 
 .modal-body {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding: 12px 16px;
+    padding: 0 24px 8px 24px;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
@@ -6141,46 +6722,56 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .modal-body::-webkit-scrollbar-track {
-    background: #1f2937;
+    background: transparent;
     border-radius: 2px;
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-    background: #4b5563;
+    background: #4a4a4a;
     border-radius: 2px;
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+    background: #5a5a5a;
 }
 
 .modal-buttons {
     flex: 0 0 auto;
     display: flex;
     gap: 8px;
-    padding: 8px 16px;
-    border-top: 1px solid #374151;
-    background: #1f2937;
+    padding: 16px 24px;
+    border-top: none;
+    background: transparent;
     justify-content: space-between; /* Space buttons evenly */
     flex-wrap: wrap; /* Allow wrapping if needed */
 }
 
 /* Style for merge button */
 .modal-button.merge-simple {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
+    background: white;
+    color: #1a1a1a;
     border: none;
-    flex: 1;
-    min-width: 120px;
+    width: 100%;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 12px;
+    padding: 14px 24px;
+    font-size: 15px;
 }
 
 .modal-button.merge-simple:hover {
-    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    background: #f0f0f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .modal-button.merge-simple:disabled {
-    background: #374151;
+    background: #3a3a3a;
+    color: #6b7280;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 /* Update existing styles for My Staked Sol mode to use flex for remaining space */
@@ -6188,9 +6779,10 @@ body:has(.token-item-selected) .token-item:hover {
 .stakes-overview-modern {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
     height: 100%;
     padding: 0;
+    min-height: 0; /* Important for flex overflow */
 }
 
 .stakes-summary-compact {
@@ -6246,10 +6838,12 @@ body:has(.token-item-selected) .token-item:hover {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     overflow-y: auto;
+    padding: 4px 0 4px 0;
     padding-right: 4px;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    min-height: 0; /* Important for flex overflow */
 }
 
 .stakes-list-modern::-webkit-scrollbar {
@@ -6257,25 +6851,25 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .stakes-list-modern::-webkit-scrollbar-track {
-    background: #1f2937;
+    background: transparent;
     border-radius: 2px;
 }
 
 .stakes-list-modern::-webkit-scrollbar-thumb {
-    background: #4b5563;
+    background: #4a4a4a;
     border-radius: 2px;
 }
 
 .stakes-list-modern::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+    background: #5a5a5a;
 }
 
 /* Modern Stake Account Cards */
 .stake-account-modern {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-    border: 1px solid #374151;
-    border-radius: 8px;
-    padding: 8px;
+    background: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
+    padding: 14px;
     transition: all 0.2s ease;
     position: relative;
     /* Removed overflow: hidden to prevent clipping of content */
@@ -6290,20 +6884,18 @@ body:has(.token-item-selected) .token-item:hover {
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4);
+    height: 0;
     opacity: 0;
-    transition: opacity 0.2s ease;
 }
 
 .stake-account-modern:hover {
-    border-color: #4b5563;
+    border-color: #5a5a5a;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .stake-account-modern:hover::before {
-    opacity: 1;
+    opacity: 0;
 }
 
 /* Modern Account Header */
@@ -6325,11 +6917,11 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .validator-logo-modern img {
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    background: #374151;
-    border: 1px solid #4b5563;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #2a2a2a;
+    border: 1.5px solid #4a4a4a;
 }
 
 .validator-details-modern {
@@ -6339,14 +6931,15 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .validator-name-modern {
-    font-size: 12px;
-    font-weight: 600;
-    color: #f3f4f6;
-    line-height: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.3;
+    margin-bottom: 2px;
 }
 
 .validator-address-modern {
-    font-size: 10px;
+    font-size: 11px;
     color: #9ca3af;
     font-family: monospace;
     font-weight: 500;
@@ -6354,9 +6947,9 @@ body:has(.token-item-selected) .token-item:hover {
 
 /* Status Badges */
 .status-badge {
-    padding: 2px 6px;
-    border-radius: 8px;
-    font-size: 8px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -6364,26 +6957,26 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .status-badge.active {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: rgba(16, 185, 129, 0.3);
+    background: #2a2a2a;
+    border-color: #4a4a4a;
     color: #10b981;
 }
 
 .status-badge.activating {
-    background: rgba(245, 158, 11, 0.1);
-    border-color: rgba(245, 158, 11, 0.3);
+    background: #2a2a2a;
+    border-color: #4a4a4a;
     color: #f59e0b;
 }
 
 .status-badge.inactive {
-    background: rgba(107, 114, 128, 0.1);
-    border-color: rgba(107, 114, 128, 0.3);
+    background: #2a2a2a;
+    border-color: #4a4a4a;
     color: #6b7280;
 }
 
 .status-badge.rewards {
-    background: rgba(124, 58, 237, 0.1);
-    border-color: rgba(124, 58, 237, 0.3);
+    background: #2a2a2a;
+    border-color: #4a4a4a;
     color: #7c3aed;
 }
 
@@ -6414,9 +7007,9 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .detail-value.stake-amount {
-    color: #fbbf24;
+    color: white;
     font-family: monospace;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
 }
 
@@ -6428,7 +7021,7 @@ body:has(.token-item-selected) .token-item:hover {
 
 .action-btn {
     flex: 1;
-    padding: 4px 8px;
+    padding: 10px 12px;
     border-radius: 4px;
     font-size: 10px;
     font-weight: 600;
@@ -6440,27 +7033,31 @@ body:has(.token-item-selected) .token-item:hover {
 }
 
 .action-btn.secondary {
-    background: rgba(75, 85, 99, 0.1);
-    border-color: #4b5563;
+    background: #2a2a2a;
+    border-color: #4a4a4a;
     color: #d1d5db;
+    border-radius: 8px;
 }
 
 .action-btn.secondary:hover {
-    background: rgba(75, 85, 99, 0.2);
-    border-color: #6b7280;
+    background: #3a3a3a;
+    border-color: #5a5a5a;
     color: #f3f4f6;
 }
 
 .action-btn.primary {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+    background: white;
+    border-color: white;
+    color: #1a1a1a;
+    font-weight: 700;
+    border-radius: 8px;
 }
 
 .action-btn.primary:hover {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #f87171;
+    background: #f0f0f0;
+    border-color: #f0f0f0;
+    color: #1a1a1a;
+    transform: translateY(-1px);
 }
 
 /* Loading and Empty States */
@@ -6750,6 +7347,32 @@ body:has(.token-item-selected) .token-item:hover {
     max-width: 100%;
 }
 
+/* Integrations row - collapsible second row */
+.integrations-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 200px;
+    }
+}
+
 .action-button-segmented {
     display: flex;
     flex-direction: column;
@@ -6853,6 +7476,42 @@ body:has(.token-item-selected) .token-item:hover {
     
     .action-label-segmented {
         font-size: 10px;
+    }
+}
+
+/* Large Screen Constraints */
+@media (min-width: 390px) {
+    .balance-section-segmented,
+    .action-buttons-segmented {
+        max-width: 370px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* Target Android devices based on screen characteristics */
+@media screen and (max-device-width: 480px) and (min-resolution: 2dppx) {
+    .wallet-header-enhanced {
+        margin-top: 30px !important;
+    }
+}
+
+/* Exclude iOS devices explicitly - more specific selectors */
+@supports (-webkit-touch-callout: none) {
+    /* iOS Safari specific - this should override for iOS */
+    @media screen and (max-device-width: 480px) {
+        .wallet-header-enhanced {
+            margin-top: 0px !important;
+        }
+    }
+}
+
+/* Additional iOS-specific override using safe area */
+@supports (padding: max(0px)) {
+    @media screen and (max-device-width: 480px) {
+        .wallet-header-enhanced {
+            margin-top: env(safe-area-inset-top, 0px) !important;
+        }
     }
 }
 
@@ -7337,196 +7996,268 @@ body:has(.token-item-selected) .token-item:hover {
     }
 }
 
-/* ===== ANDROID TOP MARGIN FIX ===== */
-/* Target Android devices based on screen characteristics */
-@media screen and (max-device-width: 480px) and (min-resolution: 2dppx) {
-    .wallet-header-enhanced {
-        margin-top: 30px !important;
-    }
-}
+/* ============================================
+   UNIFIED BUTTON SYSTEM
+   Based on onboarding pattern, adapted for modals
+   ============================================ */
 
-/* Exclude iOS devices explicitly - more specific selectors */
-@supports (-webkit-touch-callout: none) {
-    @media screen and (max-device-width: 480px) {
-        .wallet-header-enhanced {
-            margin-top: 0px !important;
-        }
-    }
-}
-
-/* Additional iOS-specific override using safe area */
-@supports (padding: max(0px)) {
-    @media screen and (max-device-width: 480px) {
-        .wallet-header-enhanced {
-            margin-top: env(safe-area-inset-top, 0px) !important;
-        }
-    }
-}
-
-/* ===== LARGE SCREEN CONSTRAINTS ===== */
-@media (min-width: 390px) {
-    .balance-section-segmented,
-    .action-buttons-segmented {
-        max-width: 370px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-}
-
-/* ===== MWA INDICATOR STYLES ===== */
-/* Profile icon container - must be relative for absolute positioning of children */
-.profile-icon {
-    position: relative;
-    pointer-events: auto;
-    /* Ensure this doesn't interfere with parent layout */
-    display: inline-block;
-}
-
-/* MWA Indicator Icon - positioned absolutely within profile-icon */
-.mwa-indicator-icon {
-    position: absolute;
-    bottom: -2px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-    display: flex;
+/* Base button styles - shared across all variants */
+.button-standard {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    pointer-events: auto;
-    /* Prevent any layout shifts */
-    transform: translateZ(0);
-    backface-visibility: hidden;
+    gap: 8px;
+    white-space: nowrap;
 }
 
-.mwa-indicator-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    transition: all 0.3s ease;
+/* Allow wrapping for full-width buttons in modals */
+.modal-content .button-standard[style*="width: 100%"],
+.stake-modal .button-standard[style*="width: 100%"] {
+    white-space: normal;
+    text-align: center;
+    min-height: 48px;
 }
 
-/* MWA Connected State */
-.mwa-indicator-icon.connected {
-    background-color: rgba(16, 185, 129, 0.2);
-    border: 1px solid #10B981;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+/* Primary variant - main action buttons */
+.button-standard.primary {
+    background: white;
+    color: #1a1a1a;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.mwa-indicator-icon.connected img {
-    filter: brightness(1.2) saturate(1.3);
+.button-standard.primary:hover {
+    background: #f0f0f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
-/* MWA Present/Available State */
-.mwa-indicator-icon.present {
-    background-color: rgba(251, 191, 36, 0.15);
-    border: 1px solid rgba(251, 191, 36, 0.6);
-    animation: mwa-pulse 2s ease-in-out infinite;
+.button-standard.primary:active {
+    transform: translateY(0);
 }
 
-.mwa-indicator-icon.present img {
-    filter: brightness(1.1) sepia(0.3) hue-rotate(30deg);
-    opacity: 0.9;
+/* Secondary variant - cancel/close actions */
+.button-standard.secondary {
+    background-color: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: white;
 }
 
-/* MWA Disconnected State */
-.mwa-indicator-icon.disconnected {
-    background-color: rgba(107, 114, 128, 0.1);
-    border: 1px solid rgba(107, 114, 128, 0.3);
+.button-standard.secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
-.mwa-indicator-icon.disconnected img {
-    filter: grayscale(0.8) brightness(0.7);
-    opacity: 0.6;
+/* Danger variant - destructive actions */
+.button-standard.danger {
+    background-color: #dc2626;
+    color: white;
 }
 
-/* Pulse animation for "present" state */
-@keyframes mwa-pulse {
-    0%, 100% {
-        box-shadow: 0 0 3px rgba(251, 191, 36, 0.3);
-        border-color: rgba(251, 191, 36, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-        border-color: rgba(251, 191, 36, 0.8);
-    }
+.button-standard.danger:hover {
+    background-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
 }
 
-/* Hover effects for MWA indicator */
-.profile-icon:hover .mwa-indicator-icon.present {
-    transform: scale(1.15) translateZ(0);
-    animation: none;
-    box-shadow: 0 0 15px rgba(251, 191, 36, 0.9);
+/* Ghost variant - minimal style for links/explorer buttons */
+.button-standard.ghost {
+    background-color: transparent;
+    color: #ffffff;
+    border: 1px solid #374151;
+    padding: 10px 16px;
 }
 
-.profile-icon:hover .mwa-indicator-icon.connected {
-    transform: scale(1.15) translateZ(0);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.9);
+.button-standard.ghost:hover {
+    background-color: #374151;
+    border-color: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Active/click state */
-.mwa-indicator-icon:active {
-    transform: scale(0.95) translateZ(0);
-    transition: transform 0.1s ease;
+/* Icon variant - icon-only buttons */
+.button-standard.icon {
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background-color: #374151;
 }
 
-.mwa-indicator-icon:hover {
-    transform: scale(1.1) translateZ(0);
+.button-standard.icon:hover {
+    background-color: #4b5563;
 }
 
-/* Profile icon with MWA connection - visual feedback */
-.profile-icon.mwa-connected {
-    border: 2px solid #10B981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+/* Disabled state - works for all variants */
+.button-standard:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
-/* ===== RESPONSIVE ADJUSTMENTS ===== */
+.button-standard.primary:disabled:hover {
+    background: #3a3a3a;
+    color: #6b7280;
+    transform: none;
+    box-shadow: none;
+}
+
+.button-standard.secondary:disabled:hover {
+    background-color: transparent;
+}
+
+.button-standard.danger:disabled:hover {
+    background-color: #dc2626;
+}
+
+/* Responsive sizing for smaller screens */
 @media (max-width: 480px) {
-    .mwa-indicator-icon {
-        width: 18px;
-        height: 18px;
-        bottom: -1px;
-        right: -6px;
+    .button-standard {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+    
+    .modal-buttons {
+        flex-direction: column-reverse;
+    }
+    
+    .modal-buttons .button-standard {
+        width: 100%;
     }
 }
 
-/* ===== HARDWARE INDICATOR (for reference - if still using) ===== */
-.hardware-indicator {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    bottom: -2px;
-    right: 14px; /* Adjusted to not overlap with MWA indicator */
-    border: 2px solid #0f0f0f;
-    transition: background-color 0.3s ease;
-    z-index: 10;
+/* Duration Card Styles for BONK Staking */
+.duration-card {
+    background: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
 }
 
-.hardware-indicator.connected {
-    background-color: #10B981;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+.duration-card:hover {
+    background: #222222;
+    border-color: #5a5a5a;
+    transform: translateY(-2px);
 }
 
-.hardware-indicator.present {
-    background-color: #F59E0B;
-    animation: pulse 1.5s infinite;
+.duration-card-selected {
+    background: white;
+    color: #1a1a1a;
+    border: 1.5px solid white;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
-.hardware-indicator.default {
-    background-color: #6B7280;
+.duration-card-selected:hover {
+    background: #f0f0f0;
+    transform: translateY(-2px);
 }
 
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.5;
-        transform: scale(1.1);
-    }
+/* Stakes Summary Section */
+.stakes-summary-section {
+    background: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.stakes-summary-title {
+    font-size: 9px;
+    color: #9ca3af;
+    font-weight: 500;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stakes-summary-amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    font-family: monospace;
+    margin-bottom: 4px;
+}
+
+.stakes-summary-accounts {
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+/* Merge Info Banner */
+.merge-info-banner {
+    background: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    color: #9ca3af;
+    font-size: 11px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Interactive Merge Banner with Button */
+.merge-info-banner-interactive {
+    background: #1a1a1a;
+    border: 1.5px solid #4a4a4a;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.merge-info-text {
+    color: #9ca3af;
+    font-size: 11px;
+    flex: 1;
+    line-height: 1.4;
+}
+
+.merge-compact-button {
+    background: white;
+    color: #1a1a1a;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.merge-compact-button:hover {
+    background: #f0f0f0;
+    transform: translateY(-1px);
+}
+
+.merge-compact-button:disabled {
+    background: #3a3a3a;
+    color: #6b7280;
+    cursor: not-allowed;
+    transform: none;
 }

@@ -86,10 +86,9 @@ pub fn BulkSendSuccessModal(
     was_hardware_wallet: bool,
     onclose: EventHandler<()>,
 ) -> Element {
-    // Explorer links for multiple explorers
-    let solana_explorer_url = format!("https://explorer.solana.com/tx/{}", signature);
+    // Explorer links - Solscan and Orb
     let solscan_url = format!("https://solscan.io/tx/{}", signature);
-    let solana_fm_url = format!("https://solana.fm/tx/{}", signature);
+    let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
     
     rsx! {
         div {
@@ -114,15 +113,7 @@ pub fn BulkSendSuccessModal(
                     class: "success-message",
                     "Your bulk transaction with {token_count} tokens was submitted to the Solana network."
                 }
-                
-                // Add hardware wallet reconnection notice if this was a hardware wallet transaction
-                if was_hardware_wallet {
-                    div {
-                        class: "hardware-reconnect-notice",
-                        "Your hardware wallet has been disconnected after the transaction. You'll need to reconnect it for future transactions."
-                    }
-                }
-                
+
                 div {
                     class: "transaction-details",
                     div {
@@ -150,13 +141,6 @@ pub fn BulkSendSuccessModal(
                             class: "explorer-buttons",
                             a {
                                 class: "explorer-button",
-                                href: "{solana_explorer_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Solana Explorer"
-                            }
-                            a {
-                                class: "explorer-button",
                                 href: "{solscan_url}",
                                 target: "_blank",
                                 rel: "noopener noreferrer",
@@ -164,10 +148,10 @@ pub fn BulkSendSuccessModal(
                             }
                             a {
                                 class: "explorer-button",
-                                href: "{solana_fm_url}",
+                                href: "{orb_url}",
                                 target: "_blank",
                                 rel: "noopener noreferrer",
-                                "Solana FM"
+                                "Orb"
                             }
                         }
                     }
@@ -213,6 +197,9 @@ pub fn BulkSendModal(
     
     // Hardware approval overlay state
     let mut show_hardware_approval = use_signal(|| false);
+    
+    // Get the global TransactionClient from context (pre-initialized with TPU)
+    let transaction_client = use_context::<Arc<TransactionClient>>();
     
     // Filter tokens to only selected ones using use_memo for reactivity
     let selected_tokens = use_memo(move || {
@@ -362,10 +349,45 @@ pub fn BulkSendModal(
                     }
                 }
                 
-                // Modal header with close button - matching other modals
-                h2 { 
-                    class: "modal-title", 
-                    "Bulk Send Tokens" 
+                // Modal header
+                div {
+                    style: "
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 24px;
+                        border-bottom: none;
+                        background: transparent;
+                    ",
+                    h2 {
+                        style: "
+                            color: #f8fafc;
+                            font-size: 22px;
+                            font-weight: 700;
+                            margin: 0;
+                            letter-spacing: -0.025em;
+                        ",
+                        "Bulk Send Tokens"
+                    }
+                    button {
+                        style: "
+                            background: none;
+                            border: none;
+                            color: white;
+                            font-size: 28px;
+                            cursor: pointer;
+                            padding: 0;
+                            border-radius: 0;
+                            transition: all 0.2s ease;
+                            min-width: 32px;
+                            min-height: 32px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        ",
+                        onclick: move |_| onclose.call(()),
+                        "×"
+                    }
                 }
                 
                 // Show error if any
@@ -374,13 +396,6 @@ pub fn BulkSendModal(
                         class: "error-message",
                         "{error}"
                     }
-                }
-
-                // From address field - matching other modals
-                div {
-                    class: "wallet-field",
-                    label { "From Address:" }
-                    div { class: "address-display", "{display_address}" }
                 }
                 
                 // ← REPLACE THE OLD RECIPIENT INPUT WITH THIS SNS-ENABLED VERSION:
@@ -516,11 +531,6 @@ pub fn BulkSendModal(
                 div { 
                     class: "modal-buttons",
                     button {
-                        class: "modal-button cancel",
-                        onclick: move |_| onclose.call(()),
-                        "Cancel"
-                    }
-                    button {
                         class: "modal-button primary",
                         disabled: sending() || !all_amounts_valid() || resolved_recipient.read().is_none(), // ← UPDATED VALIDATION
                         onclick: move |_| {
@@ -559,6 +569,9 @@ pub fn BulkSendModal(
                                     })
                                     .collect();
                                 
+                                // Clone the transaction client Arc before moving into async
+                                let client = transaction_client.clone();
+                                
                                 spawn(async move {
                                     // ← NO NEED TO VALIDATE recipient_address anymore since it's already a valid pubkey!
                                 
@@ -567,7 +580,7 @@ pub fn BulkSendModal(
                                         println!("  {} {} ({})", item.amount, item.token.symbol, item.token.mint);
                                     }
                                     
-                                    let client = TransactionClient::new(rpc_url.as_deref());
+                                    // Use the global pre-initialized TransactionClient (already cloned above)
                                 
                                     // Determine signer type based on available wallet
                                     let result = if let Some(ref hw) = hardware_wallet_clone {
@@ -599,17 +612,10 @@ pub fn BulkSendModal(
                                     match result {
                                         Ok(signature) => {
                                             println!("Bulk transaction sent successfully: {}", signature);
-                                            
+
                                             // Hide hardware approval overlay
                                             show_hardware_approval.set(false);
-                                            
-                                            // If hardware wallet was used, disconnect it and notify parent
-                                            if let Some(ref hw) = hardware_wallet_clone {
-                                                hw.disconnect().await;
-                                                // Note: You might want to add hardware wallet event handling here
-                                                // similar to how it's done in send_modal.rs
-                                            }
-                                            
+
                                             // Set the transaction signature and show success modal
                                             transaction_signature.set(signature);
                                             sending.set(false);

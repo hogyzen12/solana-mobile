@@ -1,5 +1,8 @@
+use dioxus::document::eval;
 use dioxus::prelude::*;
 use std::sync::Arc;
+use serde_json::Value;
+use std::sync::OnceLock;
 
 mod wallet;
 mod rpc;
@@ -17,22 +20,32 @@ mod currency_utils;
 mod sns;
 mod config;
 mod token_utils;
-
-// Add MWA modules for Android only
+mod privacycash;
 #[cfg(target_os = "android")]
 pub mod ffi;
+// Temporarily disabled for Solana 3.x testing (these depend on Solana 2.x SDKs)
+mod squads;
+mod carrot;
+mod bonk_staking;
+mod titan;
+mod quantum_vault;
+mod pin;
+mod timeout;
+
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+mod bridge;
 
 use components::*;
 
-// Add Mwa imports for Android only
-#[cfg(target_os = "android")]
-use std::str::FromStr;
+// MWA imports for Android only
 #[cfg(target_os = "android")]
 use async_channel::{unbounded, Receiver, Sender};
 #[cfg(target_os = "android")]
 use once_cell::sync::OnceCell;
 #[cfg(target_os = "android")]
 use solana_sdk::pubkey::Pubkey;
+#[cfg(target_os = "android")]
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -41,11 +54,21 @@ enum Route {
     WalletView {},
 }
 
-// CSS handling: local assets for Android, web-hosted for others
+// MAC and iOS bundling does not adhere to the asset! macro.
+// Android does. For apple builds use hosted resources.
+
+// For iOS/macOS builds, uncomment the remote URLs and comment out the asset! macros
+const MAIN_CSS_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@solana-3x-tpu-test/assets/main.css";
+const PIN_CSS_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@solana-3x-tpu-test/assets/pin-premium.css";
+const PRIVACY_JS_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@solana-3x-tpu-test/assets/privacy.js";
+const PRIVACY_WASM_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@solana-3x-tpu-test/assets/transaction2.wasm";
+const PRIVACY_ZKEY_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@solana-3x-tpu-test/assets/transaction2.zkey";
+
+// For local/Android builds, use the asset! macro
 #[cfg(target_os = "android")]
 const MAIN_CSS: Asset = asset!("/assets/main.css");
-#[cfg(not(target_os = "android"))]
-const MAIN_CSS_URL: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/main.css";
+#[cfg(target_os = "android")]
+const PIN_CSS: Asset = asset!("/assets/pin-premium.css");
 
 // MWA IPC Channel Setup (Android only)
 #[cfg(target_os = "android")]
@@ -76,7 +99,7 @@ fn init_ipc_channel() {
     RX.set(rx).expect("initialization of ffi receiver just once.");
 }
 
-/// Send thru channel from Kotlin to Rust (Android only)
+/// Send through channel from Kotlin to Rust (Android only)
 #[cfg(target_os = "android")]
 pub fn send_msg_from_ffi(msg: MsgFromKotlin) {
     if let Some(tx) = TX.get() {
@@ -84,30 +107,84 @@ pub fn send_msg_from_ffi(msg: MsgFromKotlin) {
     }
 }
 
+// ── DESKTOP (macOS/Windows/Linux) ─────────────────────────────────────────────
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
 fn main() {
-    // Initialize Android logger
-    #[cfg(target_os = "android")]
-    android_logger::init_once(
-        android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
+    // Hard-disable Dioxus edit server & devtools in the shipped app
+    std::env::set_var("DIOXUS_DISABLE_EDIT", "1");
+    std::env::set_var("DX_DISABLE_EDIT", "1");
+    std::env::set_var("DIOXUS_DEVTOOLS", "0");
+
+    // Optional: prove it's set when run from Terminal
+    eprintln!(
+        "DX edits OFF: DIOXUS_DISABLE_EDIT={:?}, DX_DISABLE_EDIT={:?}, DEVTOOLS={:?}",
+        std::env::var("DIOXUS_DISABLE_EDIT"),
+        std::env::var("DX_DISABLE_EDIT"),
+        std::env::var("DIOXUS_DEVTOOLS")
     );
-    
-    // Initialize MWA IPC channel on Android
-    #[cfg(target_os = "android")]
-    init_ipc_channel();
-    
+
     dioxus::launch(App);
 }
+
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+fn start_browser_bridge() -> Arc<bridge::BridgeHandler> {
+    use bridge::{BridgeHandler, BridgeServer};
+
+    let handler = Arc::new(BridgeHandler::new());
+    let handler_clone = Arc::clone(&handler);
+    let bridge_enabled = storage::load_bridge_settings_from_storage().enabled;
+    handler.set_enabled(bridge_enabled);
+
+    println!("🌉 Starting browser bridge server...");
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
+        rt.block_on(async {
+            let server = Arc::new(BridgeServer::new(7777));
+            let callback: bridge::RequestCallback = Arc::new(move |request| {
+                let handler = handler_clone.clone();
+                Box::pin(async move { handler.handle_request(request).await })
+            });
+
+            server.set_callback(callback);
+
+            if let Err(e) = server.start().await {
+                eprintln!("Bridge server error: {}", e);
+            }
+        });
+    });
+
+    handler
+}
+
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+fn init_bridge_handler() -> Arc<bridge::BridgeHandler> {
+    static BRIDGE_HANDLER: OnceLock<Arc<bridge::BridgeHandler>> = OnceLock::new();
+    BRIDGE_HANDLER.get_or_init(start_browser_bridge).clone()
+}
+
+// Web & Mobile keep the generic launcher:
+#[cfg(any(target_arch = "wasm32", target_os = "android", target_os = "ios"))]
+fn main() {
+    #[cfg(target_os = "android")]
+    {
+        android_logger::init_once(
+            android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
+        );
+        init_ipc_channel();
+    }
+    dioxus::launch(App);
+}
+
 
 #[component]
 fn App() -> Element {
     // Simple MWA state management (Android only)
     #[cfg(target_os = "android")]
     {
-        // Create simple wallet state (no complex MwaWallet struct)
         let mut mwa_wallet_state = use_signal(|| WalletState::None);
         use_context_provider(|| mwa_wallet_state);
-        
-        // Listen for MWA messages from Kotlin
+
         use_future(move || async move {
             if let Some(rx) = RX.get().cloned() {
                 while let Ok(msg) = rx.recv().await {
@@ -120,11 +197,9 @@ fn App() -> Element {
                         }
                         MsgFromKotlin::SignedTransaction(base64_tx) => {
                             log::info!("📝 MWA: Received signed transaction: {}", base64_tx);
-                            // Handle signed transaction here if needed
                         }
                         MsgFromKotlin::SignedMessage(signature) => {
                             log::info!("✍️ MWA: Received signed message: {}", signature);
-                            // Handle signed message here if needed
                         }
                     }
                 }
@@ -132,37 +207,111 @@ fn App() -> Element {
         });
     }
 
+    let (privacy_js_src, wasm_url, zkey_url) = if cfg!(any(
+        target_arch = "wasm32",
+        target_os = "macos",
+        target_os = "ios"
+    )) {
+        (
+            PRIVACY_JS_URL.to_string(),
+            PRIVACY_WASM_URL.to_string(),
+            PRIVACY_ZKEY_URL.to_string(),
+        )
+    } else {
+        let privacy_js = asset!("/assets/privacy.js");
+        let privacy_wasm = asset!("/assets/transaction2.wasm");
+        let privacy_zkey = asset!("/assets/transaction2.zkey");
+        (
+            privacy_js.to_string(),
+            privacy_wasm.to_string(),
+            privacy_zkey.to_string(),
+        )
+    };
+    println!("[PrivacyCash] asset wasm url: {}", wasm_url);
+    println!("[PrivacyCash] asset zkey url: {}", zkey_url);
+
+    use_effect(move || {
+        let wasm_url = wasm_url.clone();
+        let zkey_url = zkey_url.clone();
+        spawn(async move {
+            let mut e = eval(
+                r#"
+                let [wasmUrl, zkeyUrl] = await dioxus.recv();
+                globalThis.PRIVACY_CASH_WASM_URL = wasmUrl;
+                globalThis.PRIVACY_CASH_ZKEY_URL = zkeyUrl;
+                console.log('PrivacyCash asset globals set', { wasmUrl, zkeyUrl });
+                "#,
+            );
+            let _ = e.send(Value::Array(vec![
+                Value::String(wasm_url),
+                Value::String(zkey_url),
+            ]));
+        });
+    });
+    // Check if onboarding has been completed
+    let mut show_onboarding = use_signal(|| true);
+    //let mut show_onboarding = use_signal(|| !storage::has_completed_onboarding());
+    
+    // Check if PIN is set and locked
+    let mut is_locked = use_signal(|| storage::has_pin());
+    
     // Initialize SNS resolver with your RPC endpoint
     let sns_resolver = Arc::new(sns::SnsResolver::new(
         "https://johna-k3cr1v-fast-mainnet.helius-rpc.com".to_string() // Use your preferred RPC endpoint
     ));
 
     // Provide SNS resolver to the entire app
-    use_context_provider(|| sns_resolver);
+    use_context_provider(|| sns_resolver.clone());
 
-    // Check if onboarding has been completed
-    let mut show_onboarding = use_signal(|| true);
-    //let mut show_onboarding = use_signal(|| !storage::has_completed_onboarding());
+    // Provide a shared TransactionClient (no background TPU init to avoid iOS crash)
+    let transaction_client = Arc::new(transaction::TransactionClient::new(None));
+    use_context_provider(|| transaction_client.clone());
 
-    // Determine CSS href based on platform
-    let css_href = {
-        #[cfg(target_os = "android")]
-        { MAIN_CSS }
-        #[cfg(not(target_os = "android"))]
-        { MAIN_CSS_URL }
+    // Start browser bridge on desktop only
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+    let bridge_handler = {
+        let handler = use_context_provider(|| init_bridge_handler());
+        handler
     };
-
+    
+    let wallet = use_signal(|| None as Option<wallet::WalletInfo>);
+    
     rsx! {
-        document::Link { rel: "stylesheet", href: css_href }
+        // For iOS/macOS builds, uncomment these lines and comment out the asset! lines below
+        document::Link { rel: "preconnect", href: "https://cdn.jsdelivr.net" }
+        if cfg!(target_os = "android") {
+            document::Link { rel: "stylesheet", href: MAIN_CSS }
+            document::Link { rel: "stylesheet", href: PIN_CSS }
+        } else {
+            document::Link { rel: "stylesheet", href: MAIN_CSS_URL }
+            document::Link { rel: "stylesheet", href: PIN_CSS_URL }
+        }
+
+        document::Script { src: privacy_js_src.clone(), defer: true }
         
-        // Show onboarding on first launch, otherwise show the main app
-        if show_onboarding() {
+        // Show PIN unlock if PIN is set and app is locked
+        if is_locked() {
+            PinUnlock {
+                on_unlock: move |pin: String| {
+                    is_locked.set(false);
+                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                    {
+                        match bridge_handler.load_wallet_with_pin(&pin) {
+                            Ok(_) => println!("✅ Bridge: Wallet loaded for browser"),
+                            Err(e) => eprintln!("❌ Bridge: Failed to load wallet: {}", e),
+                        }
+                    }
+                }
+            }
+        } else if show_onboarding() {
+            // Show onboarding on first launch
             OnboardingFlow {
                 on_complete: move |_| {
                     show_onboarding.set(false);
                 }
             }
         } else {
+            // Show main app
             Router::<Route> {}
         }
     }

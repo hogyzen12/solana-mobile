@@ -9,7 +9,10 @@ use crate::storage::{
     load_jito_settings_from_storage,
     save_jito_settings_to_storage,
     delete_wallet_from_storage,
-    JitoSettings
+    load_bridge_settings_from_storage,
+    save_bridge_settings_to_storage,
+    JitoSettings,
+    BridgeSettings
 };
 use crate::currency::{
     SELECTED_CURRENCY, 
@@ -29,7 +32,13 @@ use crate::currency_utils::{
     format_portfolio_balance
 };
 use crate::components::modals::currency_modal::CurrencyModal;
-use crate::components::modals::{WalletModal, RpcModal, SendModalWithHardware, SendTokenModal, HardwareWalletModal, ReceiveModal, JitoModal, StakeModal, BulkSendModal, SwapModal, TransactionHistoryModal, LendModal, ExportWalletModal, DeleteWalletModal};
+use crate::components::{LiquidMetalButton, LiquidMetalStatus};
+use crate::privacycash;
+use crate::signing::{SignerType, TransactionSigner};
+// Temporarily disabled integrations for Solana 3.x testing
+use crate::components::modals::{WalletModal, RpcModal, SendModalWithHardware, SendTokenModal, HardwareWalletModal, ReceiveModal, JitoModal, StakeModal, BulkSendModal, EjectModal, SwapModal, TransactionHistoryModal, LendModal, ExportWalletModal, DeleteWalletModal, PrivacyCashModal, CarrotModal, BonkStakingModal, SquadsModal, QuantumVaultModal};
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+use crate::components::modals::BridgeSignModal;
 use crate::components::modals::send_modal::HardwareWalletEvent;
 use crate::token_utils::process_tokens_for_display;
 use crate::components::common::TokenDisplayData;
@@ -43,14 +52,21 @@ use crate::components::modals::BackgroundModal;
 use crate::prices::CandlestickData;
 use crate::config::tokens::{get_verified_tokens, VerifiedToken};
 use std::sync::Arc;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::collections::HashMap;
+use std::time::Duration;
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+use crate::bridge::BridgeHandler;
 #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 use arboard::Clipboard as SystemClipboard;
 use std::collections::HashSet;
 use rand::{thread_rng, Rng};
 
 #[cfg(target_os = "android")]
-use crate::WalletState;  // Import the simple WalletState from main.rs
+use crate::WalletState;
+#[cfg(target_os = "android")]
+use crate::ffi;
 
 // Define the assets for icons
 //const ICON_32: Asset = asset!("/assets/icons/32x32.png");
@@ -90,14 +106,27 @@ const ICON_STAKE:  &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@
 const ICON_BULK:   &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/bulk.svg";
 const ICON_SWAP:   &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/swap.svg";
 const ICON_LEND:   &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/jupLendLogo.svg";
+const ICON_SQUADS: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/squadsLogo.svg";
+const ICON_CARROT: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/CARROT.svg";
+const ICON_BONK_STAKE: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/BONK.svg";
+const ICON_QUANTUM: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/32x32.png";
+const ICON_WALLET: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/WALLETS.svg";
+const ICON_CREATE: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/ADD_wallet.svg";
+const ICON_IMPORT: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/IMPORT_wallet.svg";
+const ICON_EXPORT: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/EXPORT_wallet.svg";
+const ICON_DELETE: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/DELETE_wallet.svg";
+const ICON_RPC: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/RPC.svg";
+const DEFAULT_RPC_URL: &str = "https://johna-k3cr1v-fast-mainnet.helius-rpc.com";
+const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const USDT_MINT: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
+const ORE_MINT: &str = "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp";
 
 const DEVICE_LEDGER:&str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/ledger_device.webp";
 const DEVICE_UNRGBL:&str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/unruggable_device.png";
 const DEVICE_SOFTWARE:&str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/hot_wallet.png";
 const LOADING_SPINNER:&str = "https://cdn.jsdelivr.net/gh/hogyzen12/unruggable-app@main/assets/icons/infinite-spinner.svg";
-
 const ICON_MWA: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/solana-mobile@main/assets/icons/MWA.png";
-const DEVICE_SEED_VAULT: &str = "https://cdn.jsdelivr.net/gh/hogyzen12/solana-mobile@main/assets/icons/MWA.png";
+
 
 // JupiterToken struct with PartialEq and Eq for use_memo
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -125,10 +154,7 @@ async fn fetch_token_prices(
     // Use the new cached function
     match prices::get_cached_prices_and_changes().await {
         Ok((current_prices, multi_data)) => {
-            println!("✅ Got prices and multi-timeframe data");
-            
-            // Set the multi-timeframe data signal
-            multi_timeframe_data.set(multi_data.clone());
+            // println!("✅ Got prices and multi-timeframe data");
             
             // Convert to old format for backward compatibility
             let mut old_format_changes = HashMap::new();
@@ -136,11 +162,11 @@ async fn fetch_token_prices(
                 old_format_changes.insert(token.clone(), (data.change_1d_amount, data.change_1d_percentage));
                 
                 // Print all timeframes for debugging
-                println!("📊 {}: 1D={:+.1}%, 3D={:+.1}%, 7D={:+.1}%", 
-                         token,
-                         data.change_1d_percentage.unwrap_or(0.0),
-                         data.change_3d_percentage.unwrap_or(0.0),
-                         data.change_7d_percentage.unwrap_or(0.0));
+                // println!("📊 {}: 1D={:+.1}%, 3D={:+.1}%, 7D={:+.1}%", 
+                //          token,
+                //          data.change_1d_percentage.unwrap_or(0.0),
+                //          data.change_3d_percentage.unwrap_or(0.0),
+                //          data.change_7d_percentage.unwrap_or(0.0));
             }
             
             // Set both signals
@@ -163,11 +189,11 @@ async fn fetch_token_prices(
                 sol_price.set(*new_sol_price);
             }
             
-            println!("✅ Successfully updated all price data with cache");
+            // println!("✅ Successfully updated all price data with cache");
         },
         Err(e) => {
             price_error.set(Some(format!("Failed to fetch prices: {}", e)));
-            println!("❌ Error fetching prices: {}", e);
+            log::error!("Error fetching prices: {}", e);
         }
     }
     
@@ -188,12 +214,12 @@ async fn fetch_token_prices_for_discovered_tokens(
     prices_loading.set(true);
     price_error.set(None);
 
-    println!("Fetching prices for discovered tokens: {:?}", discovered_tokens);
+    // println!("Fetching prices for discovered tokens: {:?}", discovered_tokens);
 
     // Use the corrected function name from prices.rs
     match prices::get_prices_for_tokens(discovered_tokens).await {
         Ok(current_prices) => {
-            println!("Got dynamic prices: {:?}", current_prices);
+            // println!("Got dynamic prices: {:?}", current_prices);
             
             // Create dummy multi-timeframe data for backward compatibility
             let mut multi_data = HashMap::new();
@@ -238,11 +264,11 @@ async fn fetch_token_prices_for_discovered_tokens(
                 sol_price.set(*new_sol_price);
             }
             
-            println!("Successfully updated all price data for {} tokens", current_prices.len());
+            // println!("Successfully updated all price data for {} tokens", current_prices.len());
         },
         Err(e) => {
             price_error.set(Some(format!("Failed to fetch prices: {}", e)));
-            println!("Error fetching prices: {}", e);
+            log::error!("Error fetching prices: {}", e);
         }
     }
     
@@ -445,10 +471,20 @@ pub fn WalletView() -> Element {
     let mut modal_mode = use_signal(|| "create".to_string());
     let mut show_rpc_modal = use_signal(|| false);
     let mut show_send_modal = use_signal(|| false);
+    let mut send_modal_private = use_signal(|| false);
     let mut show_receive_modal = use_signal(|| false);
     let mut show_history_modal = use_signal(|| false);
     let mut show_stake_modal = use_signal(|| false);
     let mut show_swap_modal = use_signal(|| false);
+    let mut show_privacycash_modal = use_signal(|| false);
+    // Temporarily disabled for Solana 3.x testing
+    let mut show_squads_modal = use_signal(|| false);
+    let mut show_carrot_modal = use_signal(|| false);
+    let mut show_bonk_staking_modal = use_signal(|| false);
+    let mut show_quantum_vault_modal = use_signal(|| false);
+    
+    // Integrations collapse/expand state
+    let mut show_integrations = use_signal(|| false);
 
     // Hardware wallet state
     let mut hardware_wallet = use_signal(|| None as Option<Arc<HardwareWallet>>);
@@ -456,13 +492,32 @@ pub fn WalletView() -> Element {
     let mut hardware_device_present = use_signal(|| false);
     let mut hardware_connected = use_signal(|| false);
     let mut hardware_pubkey = use_signal(|| None as Option<String>);
-    // MWA state management for Android
+
+    // MWA state management (Android only)
     #[cfg(target_os = "android")]
     let mut mwa_wallet_state = use_context::<Signal<WalletState>>();
+
+    // Bridge handler (desktop only)
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+    let bridge_handler = use_context::<Arc<BridgeHandler>>();
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+    let mut pending_bridge_requests = use_signal(|| Vec::<crate::bridge::PendingBridgeRequest>::new());
+    let mut bridge_settings = use_signal(|| load_bridge_settings_from_storage());
 
     // RPC management
     let mut custom_rpc = use_signal(|| load_rpc_from_storage());
     let mut rpc_input = use_signal(|| custom_rpc().unwrap_or_default());
+
+    // Privacy Cash balance
+    let mut private_balance_sol = use_signal(|| None as Option<u64>);
+    let mut private_balance_loading = use_signal(|| false);
+    let mut private_balance_usdc = use_signal(|| None as Option<u64>);
+    let mut private_balance_usdc_loading = use_signal(|| false);
+    let mut private_balance_usdt = use_signal(|| None as Option<u64>);
+    let mut private_balance_usdt_loading = use_signal(|| false);
+    let mut private_balance_ore = use_signal(|| None as Option<u64>);
+    let mut private_balance_ore_loading = use_signal(|| false);
+    let mut last_privacy_wallet = use_signal(|| None as Option<String>);
 
     //JITO Stuff
     let mut show_jito_modal = use_signal(|| false);
@@ -519,6 +574,10 @@ pub fn WalletView() -> Element {
     let mut selected_tokens = use_signal(|| HashSet::<String>::new()); // Using mint addresses as keys
     let mut show_bulk_send_modal = use_signal(|| false);
 
+    // Eject mode state management (separate from bulk send)
+    let mut eject_mode = use_signal(|| false);
+    let mut show_eject_modal = use_signal(|| false);
+
     let mut multi_timeframe_data = use_signal(|| HashMap::<String, prices::MultiTimeframePriceData>::new());
     let mut expanded_tokens = use_signal(|| HashSet::<String>::new());
     let mut portfolio_expanded = use_signal(|| false);
@@ -539,6 +598,20 @@ pub fn WalletView() -> Element {
     let mut hardware_device_type = use_signal(|| None as Option<HardwareDeviceType>);
     let mut refresh_trigger = use_signal(|| 0u32);
     let mut is_refreshing = use_signal(|| false);
+
+    let update_bridge_settings = {
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+        let handler = bridge_handler.clone();
+        move |enabled: bool| {
+            let new_settings = BridgeSettings { enabled };
+            bridge_settings.set(new_settings);
+            save_bridge_settings_to_storage(&new_settings);
+            #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+            {
+                handler.set_enabled(enabled);
+            }
+        }
+    };
     
     // Load wallets from storage on component mount
     use_effect(move || {
@@ -553,100 +626,146 @@ pub fn WalletView() -> Element {
         }
     });
 
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+    {
+        let handler = bridge_handler.clone();
+        use_effect({
+            let handler = handler.clone();
+            move || {
+                let handler = handler.clone();
+                spawn(async move {
+                    loop {
+                        if bridge_settings().enabled {
+                            pending_bridge_requests.set(handler.pending_requests());
+                        } else {
+                            pending_bridge_requests.set(Vec::new());
+                        }
+                        tokio::time::sleep(Duration::from_millis(300)).await;
+                    }
+                });
+            }
+        });
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+    {
+        let handler = bridge_handler.clone();
+        use_effect({
+            let handler = handler.clone();
+            move || {
+                if bridge_settings().enabled {
+                    if let Some(wallet_info) = wallets.read().get(current_wallet_index()) {
+                        if let Ok(wallet) = Wallet::from_wallet_info(wallet_info) {
+                            handler.update_wallet(wallet);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    let bridge_modal: Option<Element> = {
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+        {
+            if bridge_settings().enabled {
+                if let Some(request) = pending_bridge_requests().first().cloned() {
+                    let handler_for_approve = bridge_handler.clone();
+                    let handler_for_reject = bridge_handler.clone();
+                    Some(rsx!(
+                        BridgeSignModal {
+                            request: request.clone(),
+                            onapprove: move |id| {
+                                let handler = handler_for_approve.clone();
+                                spawn(async move {
+                                    if let Err(err) = handler.approve_request(id).await {
+                                        log::error!("Bridge approve failed: {}", err);
+                                    }
+                                });
+                            },
+                            onreject: move |id| {
+                                let handler = handler_for_reject.clone();
+                                spawn(async move {
+                                    if let Err(err) = handler.reject_request(id, "User rejected".to_string()).await {
+                                        log::error!("Bridge reject failed: {}", err);
+                                    }
+                                });
+                            }
+                        }
+                    ))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        #[cfg(not(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios"))))]
+        {
+            None
+        }
+    };
+
+    let bridge_settings_row: Option<Element> = {
+        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+        {
+            let mut toggle_click = update_bridge_settings.clone();
+            let mut toggle_change = update_bridge_settings.clone();
+            Some(rsx!(
+                button {
+                    class: "dropdown-item",
+                    onclick: move |_| {
+                        let enabled = !bridge_settings().enabled;
+                        toggle_click(enabled);
+                    },
+                    div {
+                        class: "dropdown-icon action-icon",
+                        "🧩"
+                    }
+                    div {
+                        style: "display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px;",
+                        span { "Browser Extension" }
+                        label {
+                            class: "toggle-switch",
+                            input {
+                                r#type: "checkbox",
+                                checked: bridge_settings().enabled,
+                                onchange: move |e| {
+                                    toggle_change(e.checked());
+                                },
+                            }
+                            span { class: "toggle-slider" }
+                        }
+                    }
+                }
+            ))
+        }
+        #[cfg(not(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios"))))]
+        {
+            None
+        }
+    };
+
     // Monitor hardware wallet presence - check every 2 seconds
     use_effect(move || {
         spawn(async move {
             loop {
                 let is_present = HardwareWallet::is_device_present();
+                let was_present = hardware_device_present();
+                
+                if is_present != was_present {
+                    log::info!("🔍 Hardware device presence changed: {} -> {}", was_present, is_present);
+                }
+                
                 hardware_device_present.set(is_present);
                 
                 if !is_present && hardware_connected() {
+                    log::info!("🔌 Hardware device removed, disconnecting...");
                     hardware_connected.set(false);
                     hardware_wallet.set(None);
                     hardware_pubkey.set(None);
                 }
                 
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-            }
-        });
-    });
-
-    // MWA Integration Effect - Bridge MWA state with existing wallet management
-    #[cfg(target_os = "android")]
-    use_effect(move || {
-        let mwa_state = mwa_wallet_state();
-        
-        // Static tracker to prevent infinite loops
-        static LAST_MWA_STATE: std::sync::OnceLock<std::sync::Mutex<Option<String>>> = std::sync::OnceLock::new();
-        let last_state = LAST_MWA_STATE.get_or_init(|| std::sync::Mutex::new(None));
-        
-        // Convert current state to string for comparison
-        let current_state_str = match &mwa_state {
-            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
-            WalletState::None => None,
-        };
-        
-        // Check if state actually changed
-        {
-            let mut last = last_state.lock().unwrap();
-            if *last == current_state_str {
-                return;
-            }
-            *last = current_state_str.clone();
-        }
-        
-        spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-            
-            match mwa_state {
-                WalletState::Pubkey(pubkey) => {
-                    log::info!("🔗 MWA Connected - Setting as active wallet: {}", pubkey);
-                    
-                    let mwa_wallet_info = crate::wallet::WalletInfo {
-                        name: "MWA Wallet".to_string(),
-                        address: pubkey.to_string(),
-                        encrypted_key: "".to_string(),
-                    };
-                    
-                    let mut wallets_list = wallets.read().clone();
-                    let mwa_index = wallets_list.iter().position(|w| w.name == "MWA Wallet");
-                    
-                    if let Some(index) = mwa_index {
-                        if wallets_list[index].address != pubkey.to_string() {
-                            wallets_list[index] = mwa_wallet_info;
-                            wallets.set(wallets_list);
-                        }
-                        current_wallet_index.set(index);
-                    } else {
-                        wallets_list.push(mwa_wallet_info);
-                        let mwa_index = wallets_list.len() - 1;
-                        wallets.set(wallets_list);
-                        current_wallet_index.set(mwa_index);
-                    }
-                    
-                    hardware_connected.set(false);
-                    hardware_pubkey.set(None);
-                    hardware_wallet.set(None);
-                },
-                WalletState::None => {
-                    log::info!("🔗 MWA Disconnected - Cleaning up");
-                    
-                    let mut wallets_list = wallets.read().clone();
-                    if let Some(mwa_index) = wallets_list.iter().position(|w| w.name == "MWA Wallet") {
-                        let current_index = current_wallet_index();
-                        let was_using_mwa = current_index == mwa_index;
-                        let list_length_after_remove = wallets_list.len() - 1;
-                        
-                        wallets_list.remove(mwa_index);
-                        wallets.set(wallets_list);
-                        
-                        if was_using_mwa && list_length_after_remove > 0 {
-                            current_wallet_index.set(0);
-                        } else if current_index > mwa_index {
-                            current_wallet_index.set(current_index - 1);
-                        }
-                    }
-                }
             }
         });
     });
@@ -754,36 +873,36 @@ pub fn WalletView() -> Element {
         symbol: &str, 
         changes_map: &HashMap<String, (Option<f64>, Option<f64>)>
     ) -> f64 {
-        println!("Looking up price change for {}", symbol);
-        println!("Available tokens in changes_map: {:?}", changes_map.keys().collect::<Vec<_>>());
+        // println!("Looking up price change for {}", symbol);
+        // println!("Available tokens in changes_map: {:?}", changes_map.keys().collect::<Vec<_>>());
         
         // Try exact match first - get the PERCENTAGE (second value in tuple)
         if let Some((_, Some(percentage))) = changes_map.get(symbol) {
-            println!("✅ Found exact match for {}: {:.4}%", symbol, percentage);
+            // println!("✅ Found exact match for {}: {:.4}%", symbol, percentage);
             return *percentage;
         }
         
         // Try uppercase
         let uppercase = symbol.to_uppercase();
         if let Some((_, Some(percentage))) = changes_map.get(&uppercase) {
-            println!("✅ Found uppercase match for {}: {:.4}%", symbol, percentage);
+            // println!("✅ Found uppercase match for {}: {:.4}%", symbol, percentage);
             return *percentage;
         }
         
         // Try lowercase
         let lowercase = symbol.to_lowercase();
         if let Some((_, Some(percentage))) = changes_map.get(&lowercase) {
-            println!("✅ Found lowercase match for {}: {:.4}%", symbol, percentage);
+            // println!("✅ Found lowercase match for {}: {:.4}%", symbol, percentage);
             return *percentage;
         }
         
         // Check if we have the data but it's None
         if changes_map.contains_key(symbol) {
-            println!("❌ {} found in map but percentage is None", symbol);
+            // println!("❌ {} found in map but percentage is None", symbol);
             return 0.0; // Return 0% instead of random
         }
         
-        println!("❌ {} not found in changes_map at all", symbol);
+        // println!("❌ {} not found in changes_map at all", symbol);
         
         // Instead of random values, return 0.0 and log the issue
         // This will make it obvious when historical data is missing
@@ -799,6 +918,86 @@ pub fn WalletView() -> Element {
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(120)).await;
                 fetch_token_prices(token_prices, prices_loading, price_error, sol_price, daily_change, daily_change_percent, token_changes, multi_timeframe_data).await;
+            }
+        });
+    });
+
+    // MWA Integration Effect - Bridge MWA state with existing wallet management
+    #[cfg(target_os = "android")]
+    use_effect(move || {
+        let mwa_state = mwa_wallet_state();
+
+        static LAST_MWA_STATE: std::sync::OnceLock<std::sync::Mutex<Option<String>>> =
+            std::sync::OnceLock::new();
+        let last_state = LAST_MWA_STATE.get_or_init(|| std::sync::Mutex::new(None));
+
+        let current_state_str = match &mwa_state {
+            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+            WalletState::None => None,
+        };
+
+        {
+            let mut last = last_state.lock().unwrap();
+            if *last == current_state_str {
+                return;
+            }
+            *last = current_state_str.clone();
+        }
+
+        spawn(async move {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            match mwa_state {
+                WalletState::Pubkey(pubkey) => {
+                    log::info!("🔗 MWA Connected - Setting as active wallet: {}", pubkey);
+
+                    let mwa_wallet_info = crate::wallet::WalletInfo {
+                        name: "MWA Wallet".to_string(),
+                        address: pubkey.to_string(),
+                        encrypted_key: "".to_string(),
+                    };
+
+                    let mut wallets_list = wallets.read().clone();
+                    let mwa_index = wallets_list.iter().position(|w| w.name == "MWA Wallet");
+
+                    if let Some(index) = mwa_index {
+                        if wallets_list[index].address != pubkey.to_string() {
+                            wallets_list[index] = mwa_wallet_info;
+                            wallets.set(wallets_list);
+                        }
+                        current_wallet_index.set(index);
+                    } else {
+                        wallets_list.push(mwa_wallet_info);
+                        let mwa_index = wallets_list.len() - 1;
+                        wallets.set(wallets_list);
+                        current_wallet_index.set(mwa_index);
+                    }
+
+                    hardware_connected.set(false);
+                    hardware_pubkey.set(None);
+                    hardware_wallet.set(None);
+                }
+                WalletState::None => {
+                    log::info!("🔗 MWA Disconnected - Cleaning up");
+
+                    let mut wallets_list = wallets.read().clone();
+                    if let Some(mwa_index) =
+                        wallets_list.iter().position(|w| w.name == "MWA Wallet")
+                    {
+                        let current_index = current_wallet_index();
+                        let was_using_mwa = current_index == mwa_index;
+                        let list_length_after_remove = wallets_list.len() - 1;
+
+                        wallets_list.remove(mwa_index);
+                        wallets.set(wallets_list);
+
+                        if was_using_mwa && list_length_after_remove > 0 {
+                            current_wallet_index.set(0);
+                        } else if current_index > mwa_index {
+                            current_wallet_index.set(current_index - 1);
+                        }
+                    }
+                }
             }
         });
     });
@@ -830,9 +1029,8 @@ pub fn WalletView() -> Element {
         let address = {
             #[cfg(target_os = "android")]
             {
-                // Priority: MWA > Hardware > Local Wallet
-                if let WalletState::Pubkey(mwa_pubkey) = mwa_wallet_state() {
-                    mwa_pubkey.to_string()
+                if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+                    pubkey.to_string()
                 } else if hw_connected && hw_pubkey.is_some() {
                     hw_pubkey.clone().unwrap()
                 } else if let Some(wallet) = wallets_list.get(index) {
@@ -843,7 +1041,6 @@ pub fn WalletView() -> Element {
             }
             #[cfg(not(target_os = "android"))]
             {
-                // Non-Android: Hardware > Local Wallet
                 if hw_connected && hw_pubkey.is_some() {
                     hw_pubkey.clone().unwrap()
                 } else if let Some(wallet) = wallets_list.get(index) {
@@ -874,13 +1071,42 @@ pub fn WalletView() -> Element {
             }
             
             
-            // Fetch token accounts
-            let filter = Some(rpc::TokenAccountFilter::ProgramId(
+            // Fetch token accounts from BOTH Token and Token-2022 programs
+            // println!("Fetching token accounts from both Token and Token-2022 programs...");
+            
+            // Fetch from standard Token program
+            let filter_token = Some(rpc::TokenAccountFilter::ProgramId(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string()
             ));
-            match rpc::get_token_accounts_by_owner(&address, filter, rpc_url.as_deref()).await {
-                Ok(token_accounts) => {
-                    println!("Raw token accounts for address {}: {:?}", address, token_accounts);
+            let token_accounts = rpc::get_token_accounts_by_owner(&address, filter_token, rpc_url.as_deref()).await
+                .unwrap_or_else(|e| {
+                    log::warn!("Failed to fetch Token program accounts: {}", e);
+                    vec![]
+                });
+            
+            // Fetch from Token-2022 program
+            let filter_token22 = Some(rpc::TokenAccountFilter::ProgramId(
+                "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb".to_string()
+            ));
+            let token22_accounts = rpc::get_token_accounts_by_owner(&address, filter_token22, rpc_url.as_deref()).await
+                .unwrap_or_else(|e| {
+                    log::warn!("Failed to fetch Token-2022 program accounts: {}", e);
+                    vec![]
+                });
+            
+            // Merge both sets of token accounts
+            let mut all_token_accounts = token_accounts;
+            let token22_count = token22_accounts.len();
+            all_token_accounts.extend(token22_accounts);
+            
+            // println!("Found {} token accounts total ({} Token + {} Token-2022)", 
+            //     all_token_accounts.len(), 
+            //     all_token_accounts.len() - token22_count,
+            //     token22_count
+            // );
+            
+            if !all_token_accounts.is_empty() {
+                    // println!("Raw token accounts for address {}: {:?}", address, all_token_accounts);
                     
                     // Access the HashMap inside the Memo using read()
                     let verified_tokens_map = &verified_tokens_clone();
@@ -888,23 +1114,23 @@ pub fn WalletView() -> Element {
                     // Get snapshots of current prices and historical changes
                     let token_prices_snapshot = token_prices_snapshot.clone();
                     let token_changes_snapshot = token_changes.read().clone();
-                    println!("PRICE DEBUG: token_changes_snapshot in token creation: {:#?}", token_changes_snapshot);
+                    // println!("PRICE DEBUG: token_changes_snapshot in token creation: {:#?}", token_changes_snapshot);
                     
-                    let all_non_zero_accounts: Vec<_> = token_accounts
+                    let all_non_zero_accounts: Vec<_> = all_token_accounts
                         .into_iter()
                         .filter(|account| {
                             let is_non_zero = account.amount > 0.0;
-                            println!(
-                                "Token {}: amount={}, will_include={}",
-                                account.mint,
-                                account.amount,
-                                is_non_zero
-                            );
+                            // println!(
+                            //     "Token {}: amount={}, will_include={}",
+                            //     account.mint,
+                            //     account.amount,
+                            //     is_non_zero
+                            // );
                             is_non_zero  // <- INCLUDE ALL NON-ZERO TOKENS
                         })
                         .collect();
 
-                    println!("All non-zero token accounts: {} tokens", all_non_zero_accounts.len());
+                    // println!("All non-zero token accounts: {} tokens", all_non_zero_accounts.len());
 
                     // STEP 2: Fetch token metadata from Jupiter Token API
                     let mint_addresses: Vec<String> = all_non_zero_accounts.iter()
@@ -914,11 +1140,11 @@ pub fn WalletView() -> Element {
                     let token_metadata = if !mint_addresses.is_empty() {
                         match prices::get_token_metadata(mint_addresses).await {
                             Ok(metadata) => {
-                                println!("Successfully fetched metadata for {} tokens", metadata.len());
+                                // println!("Successfully fetched metadata for {} tokens", metadata.len());
                                 metadata
                             },
                             Err(e) => {
-                                println!("Error fetching token metadata: {}", e);
+                                log::warn!("Error fetching token metadata: {}", e);
                                 HashMap::new()
                             }
                         }
@@ -947,7 +1173,7 @@ pub fn WalletView() -> Element {
                     }
 
                     // STEP 4: Fetch prices for ALL tokens
-                    println!("Fetching prices for {} discovered tokens", mint_to_symbol_map.len());
+                    // println!("Fetching prices for {} discovered tokens", mint_to_symbol_map.len());
                     let token_prices_result = if !mint_to_symbol_map.is_empty() {
                         prices::get_prices_for_tokens(mint_to_symbol_map.clone()).await
                     } else {
@@ -956,11 +1182,11 @@ pub fn WalletView() -> Element {
 
                     let dynamic_token_prices = match token_prices_result {
                         Ok(prices) => {
-                            println!("Successfully fetched prices for {} tokens", prices.len());
+                            // println!("Successfully fetched prices for {} tokens", prices.len());
                             prices
                         },
                         Err(e) => {
-                            println!("Error fetching dynamic prices: {}", e);
+                            log::warn!("Error fetching dynamic prices: {}", e);
                             HashMap::new()
                         }
                     };
@@ -997,8 +1223,8 @@ pub fn WalletView() -> Element {
                             let multi_data_snapshot = multi_timeframe_data.read().clone();
                             let (change_1d, change_3d, change_7d) = get_multi_timeframe_changes(&symbol, &multi_data_snapshot);
                             
-                            println!("Creating token {}: price=${:.4}, 1D={:.1}%, 3D={:.1}%, 7D={:.1}%", 
-                                    symbol, price, change_1d, change_3d, change_7d);
+                            // println!("Creating token {}: price=${:.4}, 1D={:.1}%, 3D={:.1}%, 7D={:.1}%", 
+                            //         symbol, price, change_1d, change_3d, change_7d);
                             
                             let value_usd = account.amount * price;
                             
@@ -1013,19 +1239,20 @@ pub fn WalletView() -> Element {
                                 get_fallback_icon(&symbol)  // Use fallback for no metadata
                             };
                             
-                            Token {
-                                mint: account.mint.clone(),
-                                symbol: symbol.clone(),
-                                name: token_name,
-                                icon_type,
-                                balance: account.amount,
-                                value_usd,
-                                price,
-                                price_change: change_1d,
-                                price_change_1d: change_1d,
-                                price_change_3d: change_3d,
-                                price_change_7d: change_7d,
-                            }
+                        Token {
+                            mint: account.mint.clone(),
+                            symbol: symbol.clone(),
+                            name: token_name,
+                            icon_type,
+                            balance: account.amount,
+                            value_usd,
+                            price,
+                            price_change: change_1d,
+                            price_change_1d: change_1d,
+                            price_change_3d: change_3d,
+                            price_change_7d: change_7d,
+                            decimals: account.decimals,
+                        }
                         })
                         .collect::<Vec<Token>>();
                         
@@ -1049,6 +1276,7 @@ pub fn WalletView() -> Element {
                         price_change_1d: sol_change_1d,
                         price_change_3d: sol_change_3d,
                         price_change_7d: sol_change_7d,
+                        decimals: 9, // SOL has 9 decimals
                     }];
                     raw_tokens.extend(new_tokens);
                     raw_tokens
@@ -1069,31 +1297,30 @@ pub fn WalletView() -> Element {
                     .collect();
 
                 tokens.set(final_tokens);
-                }
-                Err(e) => {
-                    println!("Failed to fetch token accounts for address {}: {}", address, e);
-                    
-                    // Get the most recent SOL price
-                    let current_sol_price = token_prices_snapshot.get("SOL").copied().unwrap_or(sol_price());
-                    
-                    // Get multi-timeframe changes
-                    let multi_data_snapshot = multi_timeframe_data.read().clone();
-                    let (sol_change_1d, sol_change_3d, sol_change_7d) = get_multi_timeframe_changes("SOL", &multi_data_snapshot);
-                    
-                    tokens.set(vec![Token {
-                        mint: "So11111111111111111111111111111111111111112".to_string(),
-                        symbol: "SOL".to_string(),
-                        name: "Solana".to_string(),
-                        icon_type: ICON_SOL.to_string(),
-                        balance: balance(),
-                        value_usd: balance() * current_sol_price,
-                        price: current_sol_price,
-                        price_change: sol_change_1d,
-                        price_change_1d: sol_change_1d,
-                        price_change_3d: sol_change_3d,
-                        price_change_7d: sol_change_7d,
-                    }]);
-                }
+            } else {
+                println!("No token accounts found for address {}", address);
+                
+                // Get the most recent SOL price
+                let current_sol_price = token_prices_snapshot.get("SOL").copied().unwrap_or(sol_price());
+                
+                // Get multi-timeframe changes
+                let multi_data_snapshot = multi_timeframe_data.read().clone();
+                let (sol_change_1d, sol_change_3d, sol_change_7d) = get_multi_timeframe_changes("SOL", &multi_data_snapshot);
+                
+                tokens.set(vec![Token {
+                    mint: "So11111111111111111111111111111111111111112".to_string(),
+                    symbol: "SOL".to_string(),
+                    name: "Solana".to_string(),
+                    icon_type: ICON_SOL.to_string(),
+                    balance: balance(),
+                    value_usd: balance() * current_sol_price,
+                    price: current_sol_price,
+                    price_change: sol_change_1d,
+                    price_change_1d: sol_change_1d,
+                    price_change_3d: sol_change_3d,
+                    price_change_7d: sol_change_7d,
+                    decimals: 9, // SOL has 9 decimals
+                }]);
             }
         });
     });
@@ -1141,8 +1368,169 @@ pub fn WalletView() -> Element {
     });
 
     let current_wallet = wallets.read().get(current_wallet_index()).cloned();
+
+    let refresh_private_balance: Rc<RefCell<dyn FnMut()>> = {
+        let wallets_signal = wallets.clone();
+        let current_wallet_index_signal = current_wallet_index.clone();
+        let rpc_signal = custom_rpc.clone();
+        let hw_signal = hardware_wallet.clone();
+        let mut private_balance_sol = private_balance_sol.clone();
+        let mut private_balance_loading = private_balance_loading.clone();
+        let mut private_balance_usdc = private_balance_usdc.clone();
+        let mut private_balance_usdc_loading = private_balance_usdc_loading.clone();
+        let mut private_balance_usdt = private_balance_usdt.clone();
+        let mut private_balance_usdt_loading = private_balance_usdt_loading.clone();
+        let mut private_balance_ore = private_balance_ore.clone();
+        let mut private_balance_ore_loading = private_balance_ore_loading.clone();
+        Rc::new(RefCell::new(move || {
+            if hw_signal().is_some() {
+                private_balance_sol.set(None);
+                private_balance_usdc.set(None);
+                private_balance_usdt.set(None);
+                private_balance_ore.set(None);
+                private_balance_loading.set(false);
+                private_balance_usdc_loading.set(false);
+                private_balance_usdt_loading.set(false);
+                private_balance_ore_loading.set(false);
+                return;
+            }
+            private_balance_loading.set(true);
+            private_balance_usdc_loading.set(true);
+            private_balance_usdt_loading.set(true);
+            private_balance_ore_loading.set(true);
+            let rpc_url = rpc_signal().unwrap_or_else(|| DEFAULT_RPC_URL.to_string());
+            let wallet_info = wallets_signal()
+                .get(current_wallet_index_signal())
+                .cloned();
+            let mut private_balance_sol = private_balance_sol.clone();
+            let mut private_balance_loading = private_balance_loading.clone();
+            let mut private_balance_usdc = private_balance_usdc.clone();
+            let mut private_balance_usdc_loading = private_balance_usdc_loading.clone();
+            let mut private_balance_usdt = private_balance_usdt.clone();
+            let mut private_balance_usdt_loading = private_balance_usdt_loading.clone();
+            let mut private_balance_ore = private_balance_ore.clone();
+            let mut private_balance_ore_loading = private_balance_ore_loading.clone();
+            spawn(async move {
+                let Some(wallet_info) = wallet_info else {
+                    private_balance_loading.set(false);
+                    private_balance_usdc_loading.set(false);
+                    private_balance_usdt_loading.set(false);
+                    private_balance_ore_loading.set(false);
+                    return;
+                };
+                let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
+                    private_balance_loading.set(false);
+                    private_balance_usdc_loading.set(false);
+                    private_balance_usdt_loading.set(false);
+                    private_balance_ore_loading.set(false);
+                    return;
+                };
+                let signer = SignerType::from_wallet(wallet);
+                let Ok(authority) = signer.get_public_key().await else {
+                    private_balance_loading.set(false);
+                    private_balance_usdc_loading.set(false);
+                    private_balance_usdt_loading.set(false);
+                    private_balance_ore_loading.set(false);
+                    return;
+                };
+                let Ok(signature) = privacycash::sign_auth_message(&signer).await else {
+                    private_balance_loading.set(false);
+                    private_balance_usdc_loading.set(false);
+                    private_balance_usdt_loading.set(false);
+                    private_balance_ore_loading.set(false);
+                    return;
+                };
+                match privacycash::get_private_balance(&authority, &signature, Some(rpc_url.as_str())).await {
+                    Ok(balance) => {
+                        private_balance_sol.set(Some(balance));
+                    }
+                    Err(_) => {
+                        private_balance_sol.set(None);
+                    }
+                }
+                private_balance_loading.set(false);
+
+                match privacycash::get_private_balance_spl(
+                    &authority,
+                    &signature,
+                    USDC_MINT,
+                    Some(rpc_url.as_str()),
+                )
+                .await
+                {
+                    Ok(balance) => {
+                        private_balance_usdc.set(Some(balance));
+                    }
+                    Err(_) => {
+                        private_balance_usdc.set(None);
+                    }
+                }
+                private_balance_usdc_loading.set(false);
+
+                match privacycash::get_private_balance_spl(
+                    &authority,
+                    &signature,
+                    USDT_MINT,
+                    Some(rpc_url.as_str()),
+                )
+                .await
+                {
+                    Ok(balance) => {
+                        private_balance_usdt.set(Some(balance));
+                    }
+                    Err(_) => {
+                        private_balance_usdt.set(None);
+                    }
+                }
+                private_balance_usdt_loading.set(false);
+
+                match privacycash::get_private_balance_spl(
+                    &authority,
+                    &signature,
+                    ORE_MINT,
+                    Some(rpc_url.as_str()),
+                )
+                .await
+                {
+                    Ok(balance) => {
+                        private_balance_ore.set(Some(balance));
+                    }
+                    Err(_) => {
+                        private_balance_ore.set(None);
+                    }
+                }
+                private_balance_ore_loading.set(false);
+            });
+        }))
+    };
+
+    {
+        let refresh_private_balance = Rc::clone(&refresh_private_balance);
+        use_effect(move || {
+            let _ = wallets();
+            let _ = current_wallet_index();
+            let current_addr = wallets()
+                .get(current_wallet_index())
+                .map(|w| w.address.clone());
+            if current_addr != last_privacy_wallet() {
+                last_privacy_wallet.set(current_addr);
+                refresh_private_balance.borrow_mut()();
+            }
+        });
+    }
     
-    // Get full address for display - prioritize MWA, then hardware, then local wallet
+    let mwa_connected = {
+        #[cfg(target_os = "android")]
+        {
+            matches!(mwa_wallet_state(), WalletState::Pubkey(_))
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            false
+        }
+    };
+
+    // Get full address for display
     let full_address = {
         #[cfg(target_os = "android")]
         {
@@ -1168,33 +1556,24 @@ pub fn WalletView() -> Element {
         }
     };
 
-    // Truncated address for dropdown - prioritize MWA, then hardware, then local wallet
+    // Truncated address for dropdown
     let wallet_address = {
         #[cfg(target_os = "android")]
         {
-            if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
-                let addr = pubkey.to_string();
-                if addr.len() >= 8 {
-                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
-                } else {
-                    addr
-                }
+            let addr = if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+                pubkey.to_string()
             } else if hardware_connected() && hardware_pubkey().is_some() {
-                let addr = hardware_pubkey().unwrap();
-                if addr.len() >= 8 {
-                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
-                } else {
-                    addr
-                }
+                hardware_pubkey().unwrap()
             } else if let Some(wallet) = current_wallet.as_ref() {
-                let addr = &wallet.address;
-                if addr.len() >= 8 {
-                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
-                } else {
-                    addr.clone()
-                }
+                wallet.address.clone()
             } else {
                 "No wallet".to_string()
+            };
+
+            if addr.len() >= 8 {
+                format!("{}...{}", &addr[..4], &addr[addr.len() - 4..])
+            } else {
+                addr
             }
         }
         #[cfg(not(target_os = "android"))]
@@ -1202,14 +1581,14 @@ pub fn WalletView() -> Element {
             if hardware_connected() && hardware_pubkey().is_some() {
                 let addr = hardware_pubkey().unwrap();
                 if addr.len() >= 8 {
-                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
+                    format!("{}...{}", &addr[..4], &addr[addr.len() - 4..])
                 } else {
                     addr
                 }
             } else if let Some(wallet) = current_wallet.as_ref() {
                 let addr = &wallet.address;
                 if addr.len() >= 8 {
-                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
+                    format!("{}...{}", &addr[..4], &addr[addr.len() - 4..])
                 } else {
                     addr.clone()
                 }
@@ -1232,7 +1611,89 @@ pub fn WalletView() -> Element {
         ("", full_address.as_str(), "")
     };
 
-    let short_address = format!("{}...{}", start, end);    
+    let short_address = format!("{}...{}", start, end);
+
+    let hw_connected = hardware_connected();
+    let hw_device_present = hardware_device_present();
+
+    let hardware_button_status = if hw_connected {
+        LiquidMetalStatus::Ok
+    } else if hw_device_present {
+        LiquidMetalStatus::Warn
+    } else {
+        LiquidMetalStatus::Neutral
+    };
+
+    let hardware_button_interactive = hw_device_present || hw_connected;
+    let hardware_button_label = if hw_connected {
+        "Hardware wallet connected"
+    } else if hw_device_present {
+        "Hardware wallet detected"
+    } else {
+        "No hardware wallet detected"
+    };
+
+    // Log hardware button state whenever it's computed
+    log::info!(
+        "🔘 Button render: connected={}, present={}, status={:?}, interactive={}",
+        hw_connected,
+        hw_device_present,
+        hardware_button_status,
+        hardware_button_interactive
+    );
+
+    let refresh_for_success = Rc::clone(&refresh_private_balance);
+    let refresh_for_privacy = Rc::clone(&refresh_private_balance);
+
+    let mwa_dropdown_item: Option<Element> = {
+        #[cfg(target_os = "android")]
+        {
+            Some(rsx! {
+                div {
+                    class: if mwa_connected { "dropdown-item mwa-wallet-item active" } else { "dropdown-item mwa-wallet-item" },
+                    onclick: move |_| {
+                        show_dropdown.set(false);
+                        if mwa_connected {
+                            mwa_wallet_state.set(WalletState::None);
+                            log::info!("🔄 Disconnected from MWA via dropdown");
+                        } else {
+                            let result = ffi::initiate_mwa_session_from_dioxus();
+                            log::info!("📱 MWA result: {}", result);
+                        }
+                    },
+                    div {
+                        class: "dropdown-icon mwa-icon",
+                        img {
+                            src: ICON_MWA,
+                            alt: "MWA",
+                            style: "width: 24px; height: 24px;"
+                        }
+                    }
+                    div {
+                        class: "wallet-info",
+                        div { class: "wallet-name", "Seed Vault" }
+                        div {
+                            class: "wallet-address",
+                            match mwa_wallet_state() {
+                                WalletState::Pubkey(pubkey) => {
+                                    if pubkey.to_string().len() >= 8 {
+                                        format!("{}...{}", &pubkey.to_string()[..4], &pubkey.to_string()[pubkey.to_string().len() - 4..])
+                                    } else {
+                                        pubkey.to_string()
+                                    }
+                                }
+                                _ => "Tap to connect".to_string()
+                            }
+                        }
+                    }
+                }
+            })
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            None
+        }
+    };
 
     rsx! {
         div {
@@ -1249,98 +1710,38 @@ pub fn WalletView() -> Element {
                 }
             },
             
-            // Header wrapper - COMPLETE CORRECTED VERSION
+            // Header
             div {
                 class: "wallet-header-enhanced",
-                
-                // Left side - Profile/Hardware icon
+                // Left side - Liquid metal hardware button
                 div {
-                    class: {
-                        let mut classes = "profile-icon".to_string();
-                        if hardware_device_present() {
-                            classes.push_str(" hardware-present");
-                        }
-                        if hardware_connected() {
-                            classes.push_str(" hardware-connected");
-                        }
-                        #[cfg(target_os = "android")]
-                        if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
-                            classes.push_str(" mwa-connected");
-                        }
-                        classes
-                    },
-                    onclick: move |e| {
-                        if hardware_device_present() {
-                            show_hardware_modal.set(true);
-                        }
-                    },
-                    
-                    img { 
-                        src: ICON_32,
-                        alt: "Profile"
-                    }
-                    
-                    div {
-                        class: {
-                            let indicator_class = if hardware_connected() { 
-                                "hardware-indicator connected" 
-                            } else if hardware_device_present() { 
-                                "hardware-indicator present" 
-                            } else {
-                                "hardware-indicator default"
-                            };
-                            indicator_class.to_string()
-                        }
-                    }
-                    
-                    // MWA indicator with icon (only show on Android) - clickable
-                    if cfg!(target_os = "android") {
-                        div {
-                            class: {
-                                match mwa_wallet_state() {
-                                    WalletState::Pubkey(_) => "mwa-indicator-icon connected",
-                                    _ => "mwa-indicator-icon present"
-                                }
-                            },
-                            title: {
-                                match mwa_wallet_state() {
-                                    WalletState::Pubkey(_) => "Seed Vault Connected - Click to Disconnect",
-                                    _ => "Connect Seed Vault"
-                                }
-                            },
-                            onclick: move |e| {
-                                e.stop_propagation();
-                                
-                                match mwa_wallet_state() {
-                                    WalletState::Pubkey(_) => {
-                                        log::info!("🔄 Disconnecting from Seed Vault");
-                                        mwa_wallet_state.set(WalletState::None);
-                                        current_wallet_index.set(0);
-                                        log::info!("✅ Disconnected from Seed Vault");
-                                    },
-                                    _ => {
-                                        log::info!("🔄 Initiating Seed Vault connection");
-                                        let result = crate::ffi::initiate_mwa_session_from_dioxus();
-                                        log::info!("📱 Seed Vault result: {}", result);
-                                    }
-                                }
-                            },
-                            img {
-                                src: ICON_MWA,
-                                alt: "Seed Vault",
-                                width: "18",
-                                height: "18",
+                    class: "hardware-button-wrapper",
+                    LiquidMetalButton {
+                        status: hardware_button_status,
+                        animated: true,
+                        interactive: hardware_button_interactive,
+                        aria_label: Some(hardware_button_label.to_string()),
+                        class: Some("hardware-wallet-button".to_string()),
+                        onclick: move |_| {
+                            if hardware_button_interactive {
+                                show_hardware_modal.set(true);
                             }
+                        },
+                        img {
+                            src: ICON_32,
+                            alt: "Hardware wallet",
+                            width: "24",
+                            height: "24"
                         }
                     }
                 }
-                
-                // Center - Wallet Address Section
+
+                // Center - Wallet Address Section with working CSS highlighting
                 div {
                     class: "header-address-section",
                     div {
                         class: "header-address-label",
-                        if cfg!(target_os = "android") && matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+                        if mwa_connected {
                             "Seed Vault"
                         } else if hardware_connected() && hardware_pubkey().is_some() {
                             "Hardware Wallet"
@@ -1382,7 +1783,7 @@ pub fn WalletView() -> Element {
                                     }
                                 });
                             }
-                        },
+                        },                                                                                                                                                                             
                         div {
                             class: "short-address",
                             hidden: address_expanded(),
@@ -1396,6 +1797,7 @@ pub fn WalletView() -> Element {
                             span { class: "highlight", "{end}" }
                         }
                     }
+                    
                 }
 
                 // Right side - Menu icon
@@ -1407,13 +1809,28 @@ pub fn WalletView() -> Element {
                     }
                 }
 
-                // Dropdown menu
                 if show_dropdown() {
                     div {
                         class: "dropdown-menu",
                         onclick: move |e| e.stop_propagation(),
                         
-                        // Hardware wallet display
+                        // Current wallet display
+                        //if let Some(ref wallet) = current_wallet {
+                        //    div {
+                        //        class: "dropdown-item current-wallet current-wallet-highlighted", // ← ADD custom class
+                        //        div {
+                        //            class: "dropdown-icon wallet-icon",
+                        //            "💼"
+                        //        }
+                        //        div {
+                        //            class: "wallet-info",
+                        //            div { class: "wallet-name", "{wallet.name}" }
+                        //            div { class: "wallet-address", "{wallet_address}" }
+                        //        }
+                        //    }
+                        //}
+                        
+                        // Hardware wallet display (unchanged)
                         if hardware_connected() && hardware_pubkey().is_some() {
                             div {
                                 class: "dropdown-item hardware-wallet-item active",
@@ -1447,37 +1864,7 @@ pub fn WalletView() -> Element {
                             }
                         }
 
-                        // MWA Wallet display (Android only)
-                        if cfg!(target_os = "android") {
-                            if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
-                                div {
-                                    class: "dropdown-item mwa-wallet-item active",
-                                    div {
-                                        class: "dropdown-icon mwa-icon",
-                                        "📱"
-                                    }
-                                    div {
-                                        class: "wallet-info",
-                                        div { class: "wallet-name", "Seed Vault" }
-                                        div { 
-                                            class: "wallet-address",
-                                            {
-                                                let addr = pubkey.to_string();
-                                                if addr.len() >= 8 {
-                                                    format!("{}...{}", &addr[..4], &addr[addr.len()-4..])
-                                                } else {
-                                                    addr
-                                                }
-                                            }
-                                        }
-                                    }
-                                    div {
-                                        class: "mwa-status-indicator",
-                                        "✅"
-                                    }
-                                }
-                            }
-                        }
+                        {mwa_dropdown_item}
                         
                         div { class: "dropdown-divider" }
                         
@@ -1488,15 +1875,32 @@ pub fn WalletView() -> Element {
                                 } else { 
                                     "dropdown-item wallet-list-item" 
                                 },
-                                onclick: move |_| {
+                                onclick: {
+                                    let wallet_info_clone = wallet.clone();
+                                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                                    let handler = bridge_handler.clone();
+
+                                    move |_| {
                                     current_wallet_index.set(index);
                                     show_dropdown.set(false);
                                     hardware_connected.set(false);
                                     hardware_pubkey.set(None);
+
+                                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                                    {
+                                        if let Ok(wallet) = Wallet::from_wallet_info(&wallet_info_clone) {
+                                            handler.update_wallet(wallet);
+                                        }
+                                    }
+                                }
                                 },
                                 div {
                                     class: "dropdown-icon",
-                                    "💗"
+                                    img {
+                                        src: "{ICON_WALLET}",
+                                        alt: "Wallet",
+                                        style: "width: 24px; height: 24px;"
+                                    }
                                 }
                                 div {
                                     class: "wallet-info",
@@ -1518,7 +1922,7 @@ pub fn WalletView() -> Element {
                         
                         div { class: "dropdown-divider" }
 
-                        // Currency Selector
+                        // NEW: Currency Selector
                         button {
                             class: "dropdown-item currency-selector",
                             onclick: move |_| {
@@ -1541,6 +1945,7 @@ pub fn WalletView() -> Element {
                         
                         div { class: "dropdown-divider" }
                         
+                        // Existing action buttons (unchanged)
                         button {
                             class: "dropdown-item",
                             onclick: move |_| {
@@ -1550,7 +1955,11 @@ pub fn WalletView() -> Element {
                             },
                             div {
                                 class: "dropdown-icon action-icon",
-                                "+"
+                                img {
+                                    src: "{ICON_CREATE}",
+                                    alt: "Import",
+                                    style: "width: 24px; height: 24px;"
+                                }
                             }
                             "Create Wallet"
                         }
@@ -1564,12 +1973,16 @@ pub fn WalletView() -> Element {
                             },
                             div {
                                 class: "dropdown-icon action-icon",
-                                "📥"
+                                img {
+                                    src: "{ICON_IMPORT}",
+                                    alt: "Import",
+                                    style: "width: 24px; height: 24px;"
+                                }
                             }
                             "Import Wallet"
                         }
 
-                        if current_wallet.is_some() && !hardware_connected() {
+                        if current_wallet.is_some() && !hardware_connected() && !mwa_connected {
                             button {
                                 class: "dropdown-item",
                                 onclick: move |_| {
@@ -1578,13 +1991,18 @@ pub fn WalletView() -> Element {
                                 },
                                 div {
                                     class: "dropdown-icon action-icon",
-                                    "📤"
+                                    img {
+                                        src: "{ICON_EXPORT}",
+                                        alt: "Export",
+                                        style: "width: 24px; height: 24px;"
+                                    }
                                 }
                                 "Export Wallet"
                             }
                         }
 
-                        if current_wallet.is_some() && !hardware_connected() {
+                        // NEW: Delete Wallet button (only show if there's a current wallet and not hardware)
+                        if current_wallet.is_some() && !hardware_connected() && !mwa_connected {
                             button {
                                 class: "dropdown-item delete-item",
                                 onclick: move |_| {
@@ -1593,11 +2011,30 @@ pub fn WalletView() -> Element {
                                 },
                                 div {
                                     class: "dropdown-icon action-icon danger",
-                                    "🗑️"
+                                    img {
+                                        src: "{ICON_DELETE}",
+                                        alt: "Delete",
+                                        style: "width: 24px; height: 24px;"
+                                    }
                                 }
                                 "Delete Wallet"
                             }
                         }
+                        
+                        //if hardware_device_present() && !hardware_connected() {
+                        //    button {
+                        //        class: "dropdown-item",
+                        //        onclick: move |_| {
+                        //            show_hardware_modal.set(true);
+                        //            show_dropdown.set(false);
+                        //        },
+                        //        div {
+                        //            class: "dropdown-icon action-icon",
+                        //            "🔐"
+                        //        }
+                        //        "Connect Hardware Wallet"
+                        //    }
+                        //}
                         
                         div { class: "dropdown-divider" }
                         
@@ -1609,23 +2046,44 @@ pub fn WalletView() -> Element {
                             },
                             div {
                                 class: "dropdown-icon action-icon",
-                                "🔗"
+                                img {
+                                    src: "{ICON_RPC}",
+                                    alt: "RPC",
+                                    style: "width: 24px; height: 24px;"
+                                }
                             }
                             "RPC Settings"
                         }
-                
-                        button {
-                            class: "dropdown-item",
-                            onclick: move |_| {
-                                show_background_modal.set(true);
-                                show_dropdown.set(false);
-                            },
-                            div {
-                                class: "dropdown-icon action-icon",
-                                "🎨"
-                            }
-                            "Change Background"
+
+                        if let Some(row) = bridge_settings_row {
+                            {row}
                         }
+                
+                        //button {
+                        //    class: "dropdown-item",
+                        //    onclick: move |_| {
+                        //        show_background_modal.set(true);
+                        //        show_dropdown.set(false);
+                        //    },
+                        //    div {
+                        //        class: "dropdown-icon action-icon",
+                        //        "🎨"
+                        //    }
+                        //    "Change Background"
+                        //}
+
+                        //button {
+                        //    class: "dropdown-item",
+                        //    onclick: move |_| {
+                        //        show_jito_modal.set(true);
+                        //        show_dropdown.set(false);
+                        //    },
+                        //    div {
+                        //        class: "dropdown-icon action-icon",
+                        //        "⚡"
+                        //    }
+                        //    "JITO Settings"
+                        //}
                     }
                 }
             }
@@ -1634,11 +2092,24 @@ pub fn WalletView() -> Element {
                 WalletModal {
                     mode: modal_mode(),
                     onclose: move |_| show_wallet_modal.set(false),
-                    onsave: move |wallet_info| {
-                        save_wallet_to_storage(&wallet_info);
-                        wallets.write().push(wallet_info);
-                        current_wallet_index.set(wallets.read().len() - 1);
-                        show_wallet_modal.set(false);
+                    onsave: {
+                        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                        let handler_for_save = bridge_handler.clone();
+
+                        move |wallet_info| {
+                            save_wallet_to_storage(&wallet_info);
+
+                        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                        {
+                            if let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) {
+                                handler_for_save.update_wallet(wallet);
+                            }
+                        }
+
+                            wallets.write().push(wallet_info);
+                            current_wallet_index.set(wallets.read().len() - 1);
+                            show_wallet_modal.set(false);
+                        }
                     }
                 }
             }
@@ -1655,36 +2126,55 @@ pub fn WalletView() -> Element {
             if show_delete_confirmation() {
                 DeleteWalletModal {
                     wallet: wallets.read().get(current_wallet_index()).cloned(),
-                    onconfirm: move |_| {
-                        // Get the current wallet info for deletion - separate the read operation
-                        let current_index = current_wallet_index();
-                        let wallet_address_to_delete = {
-                            // This scope ensures the read lock is dropped before we try to write
-                            wallets.read().get(current_index).map(|w| w.address.clone())
-                        };
+                    onconfirm: {
+                        #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                        let handler_for_delete = bridge_handler.clone();
+
+                        move |_| {
+                            // Get the current wallet info for deletion - separate the read operation
+                            let current_index = current_wallet_index();
+                            let wallet_address_to_delete = {
+                                // This scope ensures the read lock is dropped before we try to write
+                                wallets.read().get(current_index).map(|w| w.address.clone())
+                            };
                         
-                        if let Some(wallet_address) = wallet_address_to_delete {
-                            // Delete the wallet from storage
-                            delete_wallet_from_storage(&wallet_address);
+                            if let Some(wallet_address) = wallet_address_to_delete {
+                                // Delete the wallet from storage
+                                delete_wallet_from_storage(&wallet_address);
                             
-                            // Reload wallets from storage (now we can safely write)
-                            wallets.set(load_wallets_from_storage());
+                                // Reload wallets from storage (now we can safely write)
+                                wallets.set(load_wallets_from_storage());
                             
-                            // Reset current index if needed
-                            let wallet_count = wallets.read().len();
-                            if wallet_count == 0 {
-                                current_wallet_index.set(0);
-                            } else if current_index >= wallet_count {
-                                current_wallet_index.set(wallet_count - 1);
+                                // Reset current index if needed
+                                let wallet_count = wallets.read().len();
+                                if wallet_count == 0 {
+                                    current_wallet_index.set(0);
+                                } else if current_index >= wallet_count {
+                                    current_wallet_index.set(wallet_count - 1);
+                                }
+
+                                #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
+                                {
+                                    let new_index = current_wallet_index();
+                                    if let Some(wallet_info) = wallets.read().get(new_index) {
+                                        if let Ok(wallet) = Wallet::from_wallet_info(wallet_info) {
+                                            handler_for_delete.update_wallet(wallet);
+                                        }
+                                    }
+                                }
+                            
+                                // Reset balance
+                                balance.set(0.0);
                             }
-                            
-                            // Reset balance
-                            balance.set(0.0);
+                            show_delete_confirmation.set(false);
                         }
-                        show_delete_confirmation.set(false);
                     },
                     onclose: move |_| show_delete_confirmation.set(false)
                 }
+            }
+
+            if let Some(modal) = bridge_modal {
+                {modal}
             }
             
             if show_rpc_modal() {
@@ -1737,17 +2227,21 @@ pub fn WalletView() -> Element {
                 HardwareWalletModal {
                     onclose: move |_| show_hardware_modal.set(false),
                     existing_wallet: if hardware_connected() { hardware_wallet() } else { None },
-                    ondisconnect: move |_| {
-                        hardware_wallet.set(None);
-                        hardware_connected.set(false);
-                        hardware_pubkey.set(None);
-                        hardware_device_type.set(None);
-                        show_hardware_modal.set(false);
-                    },
-                    onsuccess: move |hw_wallet: Arc<HardwareWallet>| {
-                        hardware_wallet.set(Some(hw_wallet.clone()));
-                        hardware_connected.set(true);
-                        show_hardware_modal.set(false);
+                ondisconnect: move |_| {
+                    log::info!("🔌 Hardware modal: disconnect callback fired");
+                    hardware_wallet.set(None);
+                    hardware_connected.set(false);
+                    hardware_device_present.set(false);
+                    hardware_pubkey.set(None);
+                    hardware_device_type.set(None);
+                    show_hardware_modal.set(false);
+                },
+                onsuccess: move |hw_wallet: Arc<HardwareWallet>| {
+                    log::info!("✅ Hardware modal: success callback fired");
+                    hardware_wallet.set(Some(hw_wallet.clone()));
+                    hardware_connected.set(true);
+                    hardware_device_present.set(true);
+                    show_hardware_modal.set(false);
                         
                         let hw_clone = hw_wallet.clone();
                         spawn(async move {
@@ -1771,13 +2265,17 @@ pub fn WalletView() -> Element {
                     hardware_wallet: hardware_wallet(),
                     current_balance: balance(),
                     custom_rpc: custom_rpc(),
+                    initial_privacy_enabled: send_modal_private(),
                     onclose: move |_| {
                         show_send_modal.set(false);
+                        send_modal_private.set(false);
                         // Don't reset hardware_wallet here
                     },
                     onsuccess: move |_| {
                         show_send_modal.set(false);
+                        send_modal_private.set(false);
                         // Don't reset hardware_wallet here either
+                        refresh_for_success.borrow_mut()();
                         if let Some(wallet) = wallets.read().get(current_wallet_index()) {
                             let address = wallet.address.clone();
                             let rpc_url = custom_rpc();
@@ -1805,6 +2303,20 @@ pub fn WalletView() -> Element {
                         if !event.connected {
                             hardware_wallet.set(None);
                         }
+                    },
+                    on_privacy_refresh: move |_| {
+                        refresh_for_privacy.borrow_mut()();
+                    }
+                }
+            }
+
+            if show_privacycash_modal() {
+                PrivacyCashModal {
+                    wallet: current_wallet.clone(),
+                    hardware_wallet: hardware_wallet(),
+                    custom_rpc: custom_rpc(),
+                    onclose: move |_| {
+                        show_privacycash_modal.set(false);
                     }
                 }
             }
@@ -1912,7 +2424,46 @@ pub fn WalletView() -> Element {
                     }
                 }
             }
-            
+
+            if show_eject_modal() {
+                EjectModal {
+                    selected_token_mints: selected_tokens(),
+                    all_tokens: tokens(),
+                    wallet: current_wallet.clone(),
+                    hardware_wallet: hardware_wallet(),
+                    current_balance: balance(),
+                    custom_rpc: custom_rpc(),
+                    onclose: move |_| {
+                        show_eject_modal.set(false);
+                        eject_mode.set(false);
+                        selected_tokens.set(HashSet::new());
+                    },
+                    onsuccess: move |signature| {
+                        show_eject_modal.set(false);
+                        eject_mode.set(false);
+                        selected_tokens.set(HashSet::new());
+                        println!("EJECT transaction successful: {}", signature);
+
+                        // Refresh balances after successful transaction
+                        if let Some(wallet) = wallets.read().get(current_wallet_index()) {
+                            let address = wallet.address.clone();
+                            let rpc_url = custom_rpc();
+
+                            spawn(async move {
+                                match rpc::get_balance(&address, rpc_url.as_deref()).await {
+                                    Ok(sol_balance) => {
+                                        balance.set(sol_balance);
+                                    }
+                                    Err(e) => {
+                                        println!("Failed to refresh balance after EJECT: {}", e);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
             if show_receive_modal() {
                 ReceiveModal {
                     wallet: current_wallet.clone(),
@@ -1975,29 +2526,75 @@ pub fn WalletView() -> Element {
                     hardware_wallet: hardware_wallet(),
                     custom_rpc: custom_rpc(),
                     onclose: move |_| show_lend_modal.set(false),
-                    onsuccess: move |signature| {
-                        println!("✅ Lend completed with signature: {}", signature);
-                        show_lend_modal.set(false);
-                        // Refresh balances after successful lend
-                        if let Some(wallet) = current_wallet.clone() {
-                            let address = wallet.address.clone();
-                            let rpc_url = custom_rpc();
-                            
-                            spawn(async move {
-                                match rpc::get_balance(&address, rpc_url.as_deref()).await {
-                                    Ok(sol_balance) => {
-                                        balance.set(sol_balance);
+                    onsuccess: {
+                        let wallet_for_refresh = current_wallet.clone();
+                        move |signature| {
+                            println!("✅ Lend completed with signature: {}", signature);
+                            show_lend_modal.set(false);
+                            // Refresh balances after successful lend
+                            if let Some(wallet) = wallet_for_refresh.clone() {
+                                let address = wallet.address.clone();
+                                let rpc_url = custom_rpc();
+                                
+                                spawn(async move {
+                                    match rpc::get_balance(&address, rpc_url.as_deref()).await {
+                                        Ok(sol_balance) => {
+                                            balance.set(sol_balance);
+                                        }
+                                        Err(e) => {
+                                            println!("Failed to refresh balance after lend: {}", e);
+                                        }
                                     }
-                                    Err(e) => {
-                                        println!("Failed to refresh balance after lend: {}", e);
-                                    }
-                                }
-                            });
+                                });
+                            }
                         }
                     }
                 }
             }
 
+            // Temporarily disabled for Solana 3.x testing
+            if show_squads_modal() {
+                SquadsModal {
+                    wallet: current_wallet.clone(),
+                    hardware_wallet: hardware_wallet(),
+                    custom_rpc: custom_rpc(),
+                    onclose: move |_| show_squads_modal.set(false),
+                }
+            }
+            // 
+            if show_carrot_modal() {
+                CarrotModal {
+                    wallet: current_wallet.clone(),
+                    hardware_wallet: hardware_wallet(),
+                    custom_rpc: custom_rpc(),
+                    onclose: move |_| show_carrot_modal.set(false),
+                }
+            }
+            // 
+            if show_bonk_staking_modal() {
+                BonkStakingModal {
+                    tokens: tokens(),
+                    wallet: current_wallet.clone(),
+                    hardware_wallet: hardware_wallet(),
+                    custom_rpc: custom_rpc(),
+                    onclose: move |_| show_bonk_staking_modal.set(false),
+                    onsuccess: move |sig| {
+                        println!("BONK stake successful: {}", sig);
+                        // Trigger wallet refresh
+                        refresh_trigger.set(refresh_trigger() + 1);
+                    },
+                }
+            }
+
+            if show_quantum_vault_modal() {
+                QuantumVaultModal {
+                    wallet: current_wallet.clone(),
+                    hardware_wallet: hardware_wallet(),
+                    custom_rpc: custom_rpc(),
+                    onclose: move |_| show_quantum_vault_modal.set(false),
+                }
+            }
+            
             if show_background_modal() {
                 BackgroundModal {
                     current_background: selected_background(),
@@ -2072,15 +2669,7 @@ pub fn WalletView() -> Element {
                                 alt: "Refreshing...",
                                 style: "cursor: pointer;"
                             }
-                        } else if cfg!(target_os = "android") && matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
-                            // Seed Vault connected (Android only) - USE CUSTOM ICON
-                            img { 
-                                src: DEVICE_SEED_VAULT,  // ✅ Changed from DEVICE_SOFTWARE
-                                alt: "Seed Vault Connected - Tap to Refresh",
-                                style: "cursor: pointer;"
-                            }
                         } else if hardware_connected() {
-                            // Hardware wallet connected
                             match hardware_device_type() {
                                 Some(HardwareDeviceType::ESP32) => rsx! {
                                     img { 
@@ -2105,7 +2694,6 @@ pub fn WalletView() -> Element {
                                 }
                             }
                         } else {
-                            // Default software wallet
                             img { 
                                 src: DEVICE_SOFTWARE,
                                 alt: "Software Wallet - Tap to Refresh",
@@ -2119,6 +2707,7 @@ pub fn WalletView() -> Element {
                 div {
                     class: "action-buttons-segmented",
                     
+                    // Primary action buttons row (always visible)
                     div {
                         class: "action-buttons-grid",
                         
@@ -2150,6 +2739,7 @@ pub fn WalletView() -> Element {
                                 } else {
                                     // Enter bulk send mode
                                     bulk_send_mode.set(true);
+                                    eject_mode.set(false); // Ensure eject mode is off
                                     selected_tokens.set(HashSet::new()); // Clear previous selections
                                 }
                             },
@@ -2178,7 +2768,7 @@ pub fn WalletView() -> Element {
                                 }
                             }
                         }
-                        
+
                         button {
                             class: "action-button-segmented",
                             onclick: move |_| show_stake_modal.set(true),
@@ -2215,24 +2805,195 @@ pub fn WalletView() -> Element {
                             }
                         }
                         
+                        // Integrations button (replaces Lend in primary row)
                         button {
                             class: "action-button-segmented",
                             onclick: move |_| {
-                                println!("💰 Lend button clicked!");
-                                show_lend_modal.set(true);
+                                show_integrations.set(!show_integrations());
+                                println!("Integrations button clicked - showing: {}", !show_integrations());
                             },
                             
                             div {
                                 class: "action-icon-segmented",
-                                img { 
-                                    src: "{ICON_LEND}",
-                                    alt: "Lend"
+                                div {
+                                    style: "font-size: 20px; color: white;",
+                                    if show_integrations() {
+                                        "▼"
+                                    } else {
+                                        "▶"
+                                    }
                                 }
                             }
                             
                             div {
                                 class: "action-label-segmented",
-                                "Lend"
+                                "Integrations"
+                            }
+                        }
+                    }
+                    
+                    // Integrations row (conditional - only shown when integrations are expanded)
+                    if show_integrations() {
+                        div {
+                            class: "integrations-row",
+                            
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    println!("Lend button clicked!");
+                                    show_lend_modal.set(true);
+                                },
+                                
+                                div {
+                                    class: "action-icon-segmented",
+                                    img { 
+                                        src: "{ICON_LEND}",
+                                        alt: "Lend"
+                                    }
+                                }
+                                
+                                div {
+                                    class: "action-label-segmented",
+                                    "Lend"
+                                }
+                            }
+                            
+                            // Temporarily disabled for Solana 3.x testing
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    println!("Squads button clicked!");
+                                    show_squads_modal.set(true);
+                                },
+                                
+                                div {
+                                    class: "action-icon-segmented",
+                                    img { 
+                                        src: "{ICON_SQUADS}",
+                                        alt: "Squads"
+                                    }
+                                }
+                                
+                                div {
+                                    class: "action-label-segmented",
+                                    "Squads"
+                                }
+                            }
+                            // 
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    println!("Carrot button clicked!");
+                                    show_carrot_modal.set(true);
+                                },
+                                
+                                div {
+                                    class: "action-icon-segmented",
+                                    img { 
+                                        src: "{ICON_CARROT}",
+                                        alt: "Carrot"
+                                    }
+                                }
+                                
+                                div {
+                                    class: "action-label-segmented",
+                                    "Carrot"
+                                }
+                            }
+                            // 
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    println!("BONK Stake button clicked!");
+                                    show_bonk_staking_modal.set(true);
+                                },
+
+                                div {
+                                    class: "action-icon-segmented",
+                                    img {
+                                        src: "{ICON_BONK_STAKE}",
+                                        alt: "BONK Stake"
+                                    }
+                                }
+
+                                div {
+                                    class: "action-label-segmented",
+                                    "BONK Stake"
+                                }
+                            }
+
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    println!("Quantum Vault button clicked!");
+                                    show_quantum_vault_modal.set(true);
+                                },
+
+                                div {
+                                    class: "action-icon-segmented",
+                                    img {
+                                        src: "{ICON_QUANTUM}",
+                                        alt: "Quantum Vault"
+                                    }
+                                }
+
+                                div {
+                                    class: "action-label-segmented",
+                                    "Quantum"
+                                }
+                            }
+
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    if eject_mode() {
+                                        // Exit eject mode
+                                        eject_mode.set(false);
+                                        selected_tokens.set(HashSet::new());
+                                    } else {
+                                        // Enter eject mode
+                                        eject_mode.set(true);
+                                        bulk_send_mode.set(false); // Ensure bulk send is off
+                                        selected_tokens.set(HashSet::new()); // Clear previous selections
+                                    }
+                                },
+
+                                div {
+                                    class: "action-icon-segmented",
+                                    if eject_mode() {
+                                        div {
+                                            style: "font-size: 24px; color: white;",
+                                            "✕"
+                                        }
+                                    } else {
+                                        img {
+                                            src: "{ICON_EXPORT}",
+                                            alt: "EJECT"
+                                        }
+                                    }
+                                }
+
+                                div {
+                                    class: "action-label-segmented",
+                                    if eject_mode() {
+                                        "Cancel"
+                                    } else {
+                                        "EJECT"
+                                    }
+                                }
+                            }
+
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| show_privacycash_modal.set(true),
+                                div {
+                                    class: "action-icon-segmented",
+                                    span { "🔒" }
+                                }
+                                div {
+                                    class: "action-label-segmented",
+                                    "Privacy"
+                                }
                             }
                         }
                     }
@@ -2250,7 +3011,7 @@ pub fn WalletView() -> Element {
                         button {
                             class: if active_tab() == "tokens" { "tab-button active" } else { "tab-button" },
                             onclick: move |_| active_tab.set("tokens".to_string()),
-                            if bulk_send_mode() && active_tab() == "tokens" {
+                            if (bulk_send_mode() || eject_mode()) && active_tab() == "tokens" {
                                 "Select Tokens"
                             } else {
                                 "Your Tokens"
@@ -2271,6 +3032,18 @@ pub fn WalletView() -> Element {
                                 show_bulk_send_modal.set(true);
                             },
                             "Send ({selected_tokens().len()})"
+                        }
+                    }
+
+                    // Show eject button only when on tokens tab and in eject mode with selections
+                    if active_tab() == "tokens" && eject_mode() && !selected_tokens().is_empty() {
+                        button {
+                            class: "bulk-send-confirm-button",
+                            style: "background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);",
+                            onclick: move |_| {
+                                show_eject_modal.set(true);
+                            },
+                            "EJECT ({selected_tokens().len()})"
                         }
                     }
                 }
@@ -2294,17 +3067,17 @@ pub fn WalletView() -> Element {
                                     rsx! {
                                         div {
                                             key: "{token_mint}",
-                                            class: if bulk_send_mode() && selected_tokens().contains(&token_mint) {
+                                            class: if (bulk_send_mode() || eject_mode()) && selected_tokens().contains(&token_mint) {
                                                 "token-item token-item-selected"
                                             } else {
                                                 "token-item"
                                             },
-                                            // Add click handler for bulk selection
+                                            // Add click handler for bulk selection or eject selection
                                             onclick: {
                                                 let mint_clone = token_mint.clone();
-                                                let is_bulk_mode = bulk_send_mode();
+                                                let is_selection_mode = bulk_send_mode() || eject_mode();
                                                 move |_| {
-                                                    if is_bulk_mode {
+                                                    if is_selection_mode {
                                                         let mut current_selected = selected_tokens();
                                                         if current_selected.contains(&mint_clone) {
                                                             current_selected.remove(&mint_clone);
@@ -2315,13 +3088,13 @@ pub fn WalletView() -> Element {
                                                     }
                                                 }
                                             },
-                                            
+
                                             // Main token row
                                             div {
                                                 class: "token-row-main",
-                                                
-                                                // Add selection checkbox when in bulk mode
-                                                if bulk_send_mode() {
+
+                                                // Add selection checkbox when in bulk send or eject mode
+                                                if bulk_send_mode() || eject_mode() {
                                                     div {
                                                         class: "token-selection-checkbox",
                                                         input {
@@ -2412,38 +3185,69 @@ pub fn WalletView() -> Element {
                                                 
                                                 // Individual send button - ONLY show when NOT in bulk mode
                                                 if !bulk_send_mode() {
-                                                    button {
-                                                        class: "token-send-button",
-                                                        onclick: {
-                                                            let symbol_clone = token_symbol.clone();
-                                                            let mint_clone = token_mint.clone();
-                                                            let token_decimals = match token_symbol.as_str() {
-                                                                "SOL" => Some(9),
-                                                                "USDC" | "USDT" => Some(6),
-                                                                _ => Some(9),
-                                                            };
-                                                            
-                                                            move |e| {
+                                                    if token_symbol == "SOL" {
+                                                        button {
+                                                            class: "token-send-button",
+                                                            onclick: move |e| {
                                                                 e.stop_propagation();
-                                                                if symbol_clone == "SOL" {
-                                                                    show_send_modal.set(true);
-                                                                } else {
+                                                                send_modal_private.set(false);
+                                                                show_send_modal.set(true);
+                                                            },
+                                                            title: "Send SOL",
+                                                            div {
+                                                                class: "token-send-icon",
+                                                                img {
+                                                                    src: "{ICON_SEND}",
+                                                                    alt: "Send",
+                                                                    width: "14",
+                                                                    height: "14",
+                                                                }
+                                                            }
+                                                        }
+                                                        button {
+                                                            class: "token-send-button",
+                                                            onclick: move |e| {
+                                                                e.stop_propagation();
+                                                                send_modal_private.set(false);
+                                                                show_send_modal.set(true);
+                                                            },
+                                                            title: "Private Send SOL",
+                                                            div {
+                                                                class: "token-send-icon",
+                                                                span { "🔒" }
+                                                            }
+                                                        }
+                                                    } else {
+                                                        button {
+                                                            class: "token-send-button",
+                                                            onclick: {
+                                                                let symbol_clone = token_symbol.clone();
+                                                                let mint_clone = token_mint.clone();
+                                                                let token_decimals = match token_symbol.as_str() {
+                                                                    "SOL" => Some(9),
+                                                                    "USDC" | "USDT" => Some(6),
+                                                                    "ORE" => Some(11),
+                                                                    _ => Some(9),
+                                                                };
+                                                                
+                                                                move |e| {
+                                                                    e.stop_propagation();
                                                                     selected_token_symbol.set(symbol_clone.clone());
                                                                     selected_token_mint.set(mint_clone.clone());
                                                                     selected_token_balance.set(token_balance);
                                                                     selected_token_decimals.set(token_decimals);
                                                                     show_send_token_modal.set(true);
                                                                 }
-                                                            }
-                                                        },
-                                                        title: "Send {token_symbol}",
-                                                        div {
-                                                            class: "token-send-icon",
-                                                            img {
-                                                                src: "{ICON_SEND}",
-                                                                alt: "Send",
-                                                                width: "14",
-                                                                height: "14",
+                                                            },
+                                                            title: "Send {token_symbol}",
+                                                            div {
+                                                                class: "token-send-icon",
+                                                                img {
+                                                                    src: "{ICON_SEND}",
+                                                                    alt: "Send",
+                                                                    width: "14",
+                                                                    height: "14",
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -2458,6 +3262,46 @@ pub fn WalletView() -> Element {
                                                     div {
                                                         class: "token-amount",
                                                         "{format_token_amount(token_balance, &token_symbol)}"
+                                                    }
+                                                    if token_symbol == "SOL" {
+                                                        if let Some(balance) = private_balance_sol() {
+                                                            if balance > 0 {
+                                                                div {
+                                                                    class: "token-amount",
+                                                                    "Private: {(balance as f64) / 1_000_000_000.0:.2} SOL"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if token_symbol == "USDC" {
+                                                        if let Some(balance) = private_balance_usdc() {
+                                                            if balance > 0 {
+                                                                div {
+                                                                    class: "token-amount",
+                                                                    "Private: {(balance as f64) / 1_000_000.0:.2} USDC"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if token_symbol == "USDT" {
+                                                        if let Some(balance) = private_balance_usdt() {
+                                                            if balance > 0 {
+                                                                div {
+                                                                    class: "token-amount",
+                                                                    "Private: {(balance as f64) / 1_000_000.0:.2} USDT"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if token_symbol == "ORE" || token_mint == ORE_MINT {
+                                                        if let Some(balance) = private_balance_ore() {
+                                                            if balance > 0 {
+                                                                div {
+                                                                    class: "token-amount",
+                                                                    "Private: {(balance as f64) / 100_000_000_000.0:.2} ORE"
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }

@@ -1,4 +1,5 @@
 use crate::wallet::{Wallet, WalletInfo};
+use crate::quantum_vault::StoredVault;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -132,7 +133,7 @@ fn get_storage_dir_simple() -> String {
             dir.clone()
         } else {
             log::warn!("⚠️ Using fallback storage directory");
-            "/data/data/com.unruggable/files".to_string() // Hardcoded fallback
+            "/data/data/com.mobile/files".to_string() // Hardcoded fallback
         }
     }
     #[cfg(target_os = "ios")]
@@ -229,6 +230,16 @@ fn get_jito_settings_file_path() -> String {
     format!("{storage_dir}/jito_settings.json")
 }
 
+fn get_bridge_settings_file_path() -> String {
+    let storage_dir = get_storage_dir_simple();
+    format!("{storage_dir}/bridge_settings.json")
+}
+
+fn get_quantum_vaults_file_path() -> String {
+    let storage_dir = get_storage_dir_simple();
+    format!("{storage_dir}/quantum_vaults.json")
+}
+
 // Ensure storage directory exists with logging
 fn ensure_storage_dir() -> Result<(), std::io::Error> {
     let storage_dir = get_storage_dir_simple();
@@ -265,7 +276,7 @@ pub fn ensure_android_storage_works() -> Result<(), String> {
     log::info!("🔧 Testing Android storage...");
     
     // Try to write a simple test file
-    let test_dir = "/data/data/com.unruggable/files";
+    let test_dir = "/data/data/com.mobile/files";
     
     match std::fs::create_dir_all(test_dir) {
         Ok(_) => log::info!("✅ Created storage directory: {}", test_dir),
@@ -661,6 +672,261 @@ pub fn get_current_jito_settings() -> JitoSettings {
     load_jito_settings_from_storage()
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct BridgeSettings {
+    pub enabled: bool,
+}
+
+impl Default for BridgeSettings {
+    fn default() -> Self {
+        Self { enabled: false }
+    }
+}
+
+pub fn save_bridge_settings_to_storage(settings: &BridgeSettings) {
+    log::info!("🔄 Saving bridge settings to storage");
+
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let serialized = serde_json::to_string(settings).unwrap();
+        storage.set_item("bridge_settings", &serialized).unwrap();
+    }
+
+    #[cfg(not(feature = "web"))]
+    {
+        if let Ok(_) = ensure_storage_dir() {
+            let settings_file = get_bridge_settings_file_path();
+            match serde_json::to_string_pretty(settings) {
+                Ok(serialized) => {
+                    match std::fs::write(&settings_file, serialized) {
+                        Ok(_) => log::info!("✅ Bridge settings saved to: {}", settings_file),
+                        Err(e) => log::error!("❌ Failed to write bridge settings to {}: {}", settings_file, e),
+                    }
+                }
+                Err(e) => log::error!("❌ Failed to serialize bridge settings: {}", e),
+            }
+        }
+    }
+}
+
+pub fn load_bridge_settings_from_storage() -> BridgeSettings {
+    log::info!("🔄 Loading bridge settings from storage");
+
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        storage
+            .get_item("bridge_settings")
+            .unwrap()
+            .and_then(|data| serde_json::from_str(&data).ok())
+            .unwrap_or_default()
+    }
+
+    #[cfg(not(feature = "web"))]
+    {
+        let settings_file = get_bridge_settings_file_path();
+        match std::fs::read_to_string(&settings_file) {
+            Ok(data) => {
+                match serde_json::from_str(&data) {
+                    Ok(settings) => {
+                        log::info!("✅ Bridge settings loaded from storage");
+                        settings
+                    }
+                    Err(e) => {
+                        log::error!("❌ Failed to parse bridge settings from {}: {}", settings_file, e);
+                        BridgeSettings::default()
+                    }
+                }
+            }
+            Err(e) => {
+                if e.kind() != std::io::ErrorKind::NotFound {
+                    log::error!("❌ Failed to read bridge settings from {}: {}", settings_file, e);
+                }
+                BridgeSettings::default()
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Quantum Vault Storage Functions
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Save a quantum vault to storage
+pub fn save_quantum_vault_to_storage(vault: &StoredVault) {
+    log::info!("🔐 Attempting to save quantum vault: {}", vault.name);
+
+    let mut vaults = load_quantum_vaults_from_storage();
+    vaults.push(vault.clone());
+
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let serialized = serde_json::to_string(&vaults).unwrap();
+        storage.set_item("quantum_vaults", &serialized).unwrap();
+        log::info!("✅ Quantum vault saved to web storage");
+    }
+
+    #[cfg(not(feature = "web"))]
+    {
+        match ensure_storage_dir() {
+            Ok(_) => {
+                let vault_file = get_quantum_vaults_file_path();
+                match serde_json::to_string_pretty(&vaults) {
+                    Ok(serialized) => {
+                        match std::fs::write(&vault_file, &serialized) {
+                            Ok(_) => {
+                                log::info!("✅ Quantum vault successfully saved to: {}", vault_file);
+                                log::info!("📊 Saved {} quantum vaults total", vaults.len());
+                            }
+                            Err(e) => {
+                                log::error!("❌ Failed to write quantum vaults to {}: {}", vault_file, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("❌ Failed to serialize quantum vaults: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("❌ Failed to ensure storage directory: {}", e);
+            }
+        }
+    }
+}
+
+/// Load all quantum vaults from storage
+pub fn load_quantum_vaults_from_storage() -> Vec<StoredVault> {
+    log::info!("🔐 Attempting to load quantum vaults from storage");
+
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let result = storage.get_item("quantum_vaults")
+            .unwrap()
+            .and_then(|data| serde_json::from_str(&data).ok())
+            .unwrap_or_default();
+        log::info!("📱 Loaded {} quantum vaults from web storage", result.len());
+        result
+    }
+
+    #[cfg(not(feature = "web"))]
+    {
+        let vault_file = get_quantum_vaults_file_path();
+
+        if let Err(e) = ensure_storage_dir() {
+            log::error!("❌ Storage directory error: {}", e);
+            return Vec::new();
+        }
+
+        if !Path::new(&vault_file).exists() {
+            log::info!("ℹ️ No existing quantum vault file found");
+            return Vec::new();
+        }
+
+        match std::fs::read_to_string(&vault_file) {
+            Ok(data) => {
+                match serde_json::from_str::<Vec<StoredVault>>(&data) {
+                    Ok(vaults) => vaults,
+                    Err(e) => {
+                        log::error!("❌ Failed to parse quantum vaults: {}", e);
+                        Vec::new()
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("❌ Failed to read quantum vaults: {}", e);
+                Vec::new()
+            }
+        }
+    }
+}
+
+/// Mark a quantum vault as used after splitting
+pub fn mark_quantum_vault_as_used(vault_address: &str) {
+    log::info!("🔐 Marking quantum vault as used: {}", vault_address);
+
+    let mut vaults = load_quantum_vaults_from_storage();
+
+    if let Some(vault) = vaults.iter_mut().find(|v| v.address == vault_address) {
+        vault.used = true;
+        save_quantum_vaults_to_storage(&vaults);
+        log::info!("✅ Quantum vault marked as used");
+    } else {
+        log::warn!("⚠️ Quantum vault not found: {}", vault_address);
+    }
+}
+
+/// Delete a quantum vault from storage
+pub fn delete_quantum_vault_from_storage(vault_address: &str) {
+    log::info!("🔐 Attempting to delete quantum vault: {}", vault_address);
+
+    let mut vaults = load_quantum_vaults_from_storage();
+    let original_count = vaults.len();
+
+    vaults.retain(|vault| vault.address != vault_address);
+
+    if vaults.len() < original_count {
+        log::info!("✅ Quantum vault {} removed from memory", vault_address);
+        save_quantum_vaults_to_storage(&vaults);
+        log::info!("✅ Quantum vault deletion completed. {} vaults remaining.", vaults.len());
+    } else {
+        log::warn!("⚠️ Quantum vault {} not found in storage", vault_address);
+    }
+}
+
+/// Save quantum vaults list to storage
+pub fn save_quantum_vaults_to_storage(vaults: &Vec<StoredVault>) {
+    log::info!("🔐 Saving {} quantum vaults to storage", vaults.len());
+
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let serialized = serde_json::to_string(vaults).unwrap();
+        storage.set_item("quantum_vaults", &serialized).unwrap();
+        log::info!("✅ Quantum vaults saved to web storage");
+    }
+
+    #[cfg(not(feature = "web"))]
+    {
+        match ensure_storage_dir() {
+            Ok(_) => {
+                let vault_file = get_quantum_vaults_file_path();
+                match serde_json::to_string_pretty(vaults) {
+                    Ok(serialized) => {
+                        match std::fs::write(&vault_file, &serialized) {
+                            Ok(_) => {
+                                log::info!("✅ Quantum vaults successfully saved to: {}", vault_file);
+                            }
+                            Err(e) => {
+                                log::error!("❌ Failed to write quantum vaults to {}: {}", vault_file, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("❌ Failed to serialize quantum vaults: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("❌ Failed to ensure storage directory: {}", e);
+            }
+        }
+    }
+}
+
 /// Delete a wallet by address from storage
 pub fn delete_wallet_from_storage(wallet_address: &str) {
     log::info!("🔄 Attempting to delete wallet: {}", wallet_address);
@@ -779,5 +1045,207 @@ pub fn mark_onboarding_completed() {
                 Err(e) => log::error!("❌ Failed to save onboarding status: {}", e),
             }
         }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PIN Storage Functions
+// ══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PinData {
+    pub pin_hash: String,
+    pub salt: Vec<u8>,
+    pub failed_attempts: u32,
+}
+
+fn get_pin_file_path() -> String {
+    let storage_dir = get_storage_dir_simple();
+    format!("{}/pin.json", storage_dir)
+}
+
+/// Check if a PIN is set
+pub fn has_pin() -> bool {
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        storage.get_item("pin_data").unwrap().is_some()
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        let pin_file = get_pin_file_path();
+        Path::new(&pin_file).exists()
+    }
+}
+
+/// Save PIN hash and salt
+pub fn save_pin(pin: &str) -> Result<(), String> {
+    use crate::pin::{hash_pin, generate_salt};
+    
+    log::info!("🔐 Saving PIN to storage");
+    
+    let pin_hash = hash_pin(pin);
+    let salt = generate_salt();
+    
+    let pin_data = PinData {
+        pin_hash,
+        salt: salt.to_vec(),
+        failed_attempts: 0,
+    };
+    
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let serialized = serde_json::to_string(&pin_data)
+            .map_err(|e| format!("Failed to serialize PIN data: {}", e))?;
+        storage.set_item("pin_data", &serialized)
+            .map_err(|_| "Failed to save PIN to web storage".to_string())?;
+        log::info!("✅ PIN saved to web storage");
+        Ok(())
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        ensure_storage_dir()
+            .map_err(|e| format!("Failed to ensure storage directory: {}", e))?;
+        
+        let pin_file = get_pin_file_path();
+        let serialized = serde_json::to_string_pretty(&pin_data)
+            .map_err(|e| format!("Failed to serialize PIN data: {}", e))?;
+        
+        std::fs::write(&pin_file, serialized)
+            .map_err(|e| format!("Failed to write PIN file: {}", e))?;
+        
+        log::info!("✅ PIN saved to: {}", pin_file);
+        Ok(())
+    }
+}
+
+/// Verify PIN and return salt if correct
+pub fn verify_pin(pin: &str) -> Result<Vec<u8>, String> {
+    use crate::pin::hash_pin;
+    
+    if is_pin_locked() {
+        return Err("PIN is locked due to too many failed attempts".to_string());
+    }
+    
+    let mut pin_data = load_pin_data()?;
+    let pin_hash = hash_pin(pin);
+    
+    if pin_hash == pin_data.pin_hash {
+        // Correct PIN - reset failed attempts
+        pin_data.failed_attempts = 0;
+        let _ = save_pin_data(&pin_data);
+        log::info!("✅ PIN verified successfully");
+        Ok(pin_data.salt)
+    } else {
+        // Wrong PIN - increment failed attempts
+        pin_data.failed_attempts += 1;
+        log::warn!("❌ PIN verification failed. Attempts: {}/10", pin_data.failed_attempts);
+        let _ = save_pin_data(&pin_data);
+        
+        if pin_data.failed_attempts >= 10 {
+            Err("PIN locked due to too many failed attempts".to_string())
+        } else {
+            Err(format!("Incorrect PIN. {} attempts remaining", 10 - pin_data.failed_attempts))
+        }
+    }
+}
+
+/// Check if PIN is locked
+pub fn is_pin_locked() -> bool {
+    if let Ok(pin_data) = load_pin_data() {
+        pin_data.failed_attempts >= 10
+    } else {
+        false
+    }
+}
+
+/// Get salt for encryption (used when PIN is already verified)
+pub fn get_pin_salt() -> Result<Vec<u8>, String> {
+    let pin_data = load_pin_data()?;
+    Ok(pin_data.salt)
+}
+
+/// Load PIN data from storage
+fn load_pin_data() -> Result<PinData, String> {
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let data = storage.get_item("pin_data")
+            .map_err(|_| "Failed to access web storage".to_string())?
+            .ok_or_else(|| "No PIN data found".to_string())?;
+        
+        serde_json::from_str(&data)
+            .map_err(|e| format!("Failed to parse PIN data: {}", e))
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        let pin_file = get_pin_file_path();
+        let data = std::fs::read_to_string(&pin_file)
+            .map_err(|_| "No PIN data found".to_string())?;
+        
+        serde_json::from_str(&data)
+            .map_err(|e| format!("Failed to parse PIN data: {}", e))
+    }
+}
+
+/// Save PIN data to storage
+fn save_pin_data(pin_data: &PinData) -> Result<(), String> {
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        let serialized = serde_json::to_string(pin_data)
+            .map_err(|e| format!("Failed to serialize PIN data: {}", e))?;
+        storage.set_item("pin_data", &serialized)
+            .map_err(|_| "Failed to save PIN data to web storage".to_string())?;
+        Ok(())
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        let pin_file = get_pin_file_path();
+        let serialized = serde_json::to_string_pretty(pin_data)
+            .map_err(|e| format!("Failed to serialize PIN data: {}", e))?;
+        
+        std::fs::write(&pin_file, serialized)
+            .map_err(|e| format!("Failed to write PIN file: {}", e))?;
+        
+        Ok(())
+    }
+}
+
+/// Remove PIN from storage
+pub fn remove_pin() -> Result<(), String> {
+    log::info!("🔐 Removing PIN from storage");
+    
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let storage = window.local_storage().unwrap().unwrap();
+        storage.remove_item("pin_data")
+            .map_err(|_| "Failed to remove PIN from web storage".to_string())?;
+        log::info!("✅ PIN removed from web storage");
+        Ok(())
+    }
+    
+    #[cfg(not(feature = "web"))]
+    {
+        let pin_file = get_pin_file_path();
+        std::fs::remove_file(&pin_file)
+            .map_err(|e| format!("Failed to remove PIN file: {}", e))?;
+        log::info!("✅ PIN removed from storage");
+        Ok(())
     }
 }

@@ -38,11 +38,11 @@ impl BackgroundTheme {
                 url: "https://raw.githubusercontent.com/hogyzen12/unruggable-app/refs/heads/main/assets/backgrounds/fastaf.webp".to_string(),
                 description: "txs fast afff".to_string(),
             }, 
-            BackgroundTheme {
-                name: "STUK x Unruggable".to_string(),
-                url: "https://raw.githubusercontent.com/hogyzen12/unruggable-app/refs/heads/main/assets/backgrounds/stuk.webp".to_string(),
-                description: "Superteam is a cheatcode".to_string(),
-            },           
+            //BackgroundTheme {
+            //    name: "STUK x Unruggable".to_string(),
+            //    url: LOCAL_BG.to_string(),
+            //    description: "Superteam is a cheatcode".to_string(),
+            //},           
         ]
     }
 }
