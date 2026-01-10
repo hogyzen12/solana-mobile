@@ -33,7 +33,6 @@ impl BackgroundTheme {
                 url: "https://raw.githubusercontent.com/hogyzen12/unruggable-app/refs/heads/main/assets/backgrounds/stake.webp".to_string(),
                 description: "Stake with us".to_string(),
             }, 
-<<<<<<< HEAD
             BackgroundTheme {
                 name: "Jito x Unruggable".to_string(),
                 url: "https://raw.githubusercontent.com/hogyzen12/unruggable-app/refs/heads/main/assets/backgrounds/fastaf.webp".to_string(),
