@@ -26,9 +26,11 @@ fn convert_compute_budget_instruction(interface_ix: solana_instruction::Instruct
         data: interface_ix.data,
     }
 }
-use crate::wallet::{Wallet, WalletInfo};
+use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
-use crate::signing::{TransactionSigner, software::SoftwareSigner, hardware::HardwareSigner};
+use crate::signing::{select_signer, TransactionSigner};
+#[cfg(target_os = "android")]
+use crate::signing::mwa::MwaSigner;
 use crate::storage::get_current_jito_settings;
 use crate::transaction::TransactionClient;
 use crate::staking::{DetailedStakeAccount, StakeAccountState, StakingError};
@@ -197,6 +199,7 @@ pub async fn instant_unstake_stake_account(
     stake_account: &DetailedStakeAccount,
     wallet_info: Option<&WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
+    mwa_pubkey: Option<String>,
     rpc_url: Option<&str>,
 ) -> Result<String, StakingError> {
     println!("INSTANT UNSTAKE: Starting for stake account: {}", stake_account.pubkey);
@@ -212,16 +215,15 @@ pub async fn instant_unstake_stake_account(
     // Create transaction client
     let transaction_client = TransactionClient::new(rpc_url);
     
-    // Create signer
-    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
-        Box::new(HardwareSigner::from_wallet(hw.clone()))
-    } else if let Some(w) = wallet_info {
-        let wallet = Wallet::from_wallet_info(w)
-            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
-        Box::new(SoftwareSigner::new(wallet))
-    } else {
-        return Err(StakingError::WalletError("No wallet provided".to_string()));
-    };
+    let signer = select_signer(
+        wallet_info.cloned(),
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    )
+    .map_err(StakingError::WalletError)?;
 
     // Get user pubkey
     let user_pubkey_str = signer.get_public_key().await
@@ -246,12 +248,12 @@ pub async fn instant_unstake_stake_account(
 
     // Add Jito tips if enabled AND not using hardware wallet
     let jito_settings = get_current_jito_settings();
-    if jito_settings.jito_tx && hardware_wallet.is_none() {
+    if jito_settings.jito_tx && !signer.is_hardware() {
         println!("Adding Jito tips");
         if let Err(e) = add_jito_tips(&user_pubkey, &mut instructions) {
             println!("Jito tips failed: {}, continuing", e);
         }
-    } else if hardware_wallet.is_some() {
+    } else if signer.is_hardware() {
         println!("Hardware wallet detected - skipping Jito tips");
     }
 
@@ -268,6 +270,31 @@ pub async fn instant_unstake_stake_account(
         message: VersionedMessage::Legacy(message),
     };
     
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let unsigned_tx_bytes = bincode::serialize(&transaction)
+            .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+            .await
+            .map_err(|e| StakingError::WalletError(format!("Failed to sign via MWA: {}", e)))?;
+        let encoded = bs58::encode(signed_tx_bytes).into_string();
+
+        println!("Sending instant unstake transaction ({} bytes)", encoded.len());
+
+        match transaction_client.send_transaction(&encoded).await {
+            Ok(sig) => {
+                println!("Instant unstake successful!");
+                println!("Transaction: {}", sig);
+                println!("Explorer: https://explorer.solana.com/tx/{}?cluster=mainnet", sig);
+                return Ok(sig);
+            }
+            Err(e) => {
+                println!("Transaction failed: {}", e);
+                return Err(StakingError::TransactionFailed(format!("Transaction failed: {}", e)));
+            }
+        }
+    }
+
     // Sign transaction
     let message_bytes = transaction.message.serialize();
     let signature_bytes = signer.sign_message(&message_bytes).await
@@ -349,6 +376,7 @@ pub async fn normal_unstake_stake_account(
     stake_account: &DetailedStakeAccount,
     wallet_info: Option<&WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
+    mwa_pubkey: Option<String>,
     rpc_url: Option<&str>,
 ) -> Result<String, StakingError> {
     println!("NORMAL UNSTAKE: Starting for stake account: {}", stake_account.pubkey);
@@ -364,16 +392,15 @@ pub async fn normal_unstake_stake_account(
     // Create transaction client
     let transaction_client = TransactionClient::new(rpc_url);
     
-    // Create signer
-    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
-        Box::new(HardwareSigner::from_wallet(hw.clone()))
-    } else if let Some(w) = wallet_info {
-        let wallet = Wallet::from_wallet_info(w)
-            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
-        Box::new(SoftwareSigner::new(wallet))
-    } else {
-        return Err(StakingError::WalletError("No wallet provided".to_string()));
-    };
+    let signer = select_signer(
+        wallet_info.cloned(),
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    )
+    .map_err(StakingError::WalletError)?;
 
     // Get user pubkey (this will be the stake authority)
     let user_pubkey_str = signer.get_public_key().await
@@ -400,12 +427,12 @@ pub async fn normal_unstake_stake_account(
 
     // Add Jito tips if enabled AND not using hardware wallet
     let jito_settings = get_current_jito_settings();
-    if jito_settings.jito_tx && hardware_wallet.is_none() {
+    if jito_settings.jito_tx && !signer.is_hardware() {
         println!("Adding Jito tips");
         if let Err(e) = add_jito_tips(&user_pubkey, &mut instructions) {
             println!("Jito tips failed: {}, continuing", e);
         }
-    } else if hardware_wallet.is_some() {
+    } else if signer.is_hardware() {
         println!("Hardware wallet detected - skipping Jito tips");
     }
 
@@ -422,6 +449,31 @@ pub async fn normal_unstake_stake_account(
         message: VersionedMessage::Legacy(message),
     };
     
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let unsigned_tx_bytes = bincode::serialize(&transaction)
+            .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+            .await
+            .map_err(|e| StakingError::WalletError(format!("Failed to sign via MWA: {}", e)))?;
+        let encoded = bs58::encode(signed_tx_bytes).into_string();
+
+        println!("Sending normal unstake (deactivate) transaction ({} bytes)", encoded.len());
+
+        match transaction_client.send_transaction(&encoded).await {
+            Ok(sig) => {
+                println!("Normal unstake successful!");
+                println!("Transaction: {}", sig);
+                println!("Explorer: https://explorer.solana.com/tx/{}?cluster=mainnet", sig);
+                return Ok(sig);
+            }
+            Err(e) => {
+                println!("Transaction failed: {}", e);
+                return Err(StakingError::TransactionFailed(format!("Transaction failed: {}", e)));
+            }
+        }
+    }
+
     // Sign transaction
     let message_bytes = transaction.message.serialize();
     let signature_bytes = signer.sign_message(&message_bytes).await
@@ -512,6 +564,7 @@ pub async fn partial_unstake_stake_account(
     amount_to_unstake_sol: f64,
     wallet_info: Option<&WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
+    mwa_pubkey: Option<String>,
     rpc_url: Option<&str>,
 ) -> Result<String, StakingError> {
     println!("PARTIAL UNSTAKE: Starting for stake account: {}", stake_account.pubkey);
@@ -556,16 +609,15 @@ pub async fn partial_unstake_stake_account(
     // Create transaction client
     let transaction_client = TransactionClient::new(rpc_url);
     
-    // Create signer
-    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
-        Box::new(HardwareSigner::from_wallet(hw.clone()))
-    } else if let Some(w) = wallet_info {
-        let wallet = Wallet::from_wallet_info(w)
-            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
-        Box::new(SoftwareSigner::new(wallet))
-    } else {
-        return Err(StakingError::WalletError("No wallet provided".to_string()));
-    };
+    let signer = select_signer(
+        wallet_info.cloned(),
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    )
+    .map_err(StakingError::WalletError)?;
 
     // Get user pubkey (stake authority)
     let user_pubkey_str = signer.get_public_key().await
@@ -620,12 +672,12 @@ pub async fn partial_unstake_stake_account(
 
     // Add Jito tips if enabled AND not using hardware wallet
     let jito_settings = get_current_jito_settings();
-    if jito_settings.jito_tx && hardware_wallet.is_none() {
+    if jito_settings.jito_tx && !signer.is_hardware() {
         println!("Adding Jito tips");
         if let Err(e) = add_jito_tips(&user_pubkey, &mut instructions) {
             println!("Jito tips failed: {}, continuing", e);
         }
-    } else if hardware_wallet.is_some() {
+    } else if signer.is_hardware() {
         println!("Hardware wallet detected - skipping Jito tips");
     }
 
@@ -642,18 +694,6 @@ pub async fn partial_unstake_stake_account(
         message: VersionedMessage::Legacy(message),
     };
     
-    // Sign with wallet
-    let message_bytes = transaction.message.serialize();
-    let signature_bytes = signer.sign_message(&message_bytes).await
-        .map_err(|e| StakingError::WalletError(format!("Failed to sign: {}", e)))?;
-
-    let signature = SolanaSignature::from(
-        <[u8; 64]>::try_from(signature_bytes.as_slice())
-            .map_err(|_| StakingError::WalletError("Invalid signature length".to_string()))?
-    );
-
-    transaction.signatures[0] = signature;
-    
     // Also sign with the new stake account keypair
     let legacy_message = match &transaction.message {
         VersionedMessage::Legacy(msg) => msg.clone(),
@@ -667,7 +707,44 @@ pub async fn partial_unstake_stake_account(
     
     // Sign with the new stake keypair
     legacy_transaction.partial_sign(&[&new_stake_keypair], recent_blockhash);
-    
+
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let unsigned_tx_bytes = bincode::serialize(&legacy_transaction)
+            .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+            .await
+            .map_err(|e| StakingError::WalletError(format!("Failed to sign via MWA: {}", e)))?;
+        let encoded = bs58::encode(signed_tx_bytes).into_string();
+
+        println!("Sending partial unstake transaction ({} bytes)", encoded.len());
+
+        match transaction_client.send_transaction(&encoded).await {
+            Ok(sig) => {
+                println!("Partial unstake successful!");
+                println!("Transaction: {}", sig);
+                println!("Explorer: https://explorer.solana.com/tx/{}?cluster=mainnet", sig);
+                return Ok(sig);
+            }
+            Err(e) => {
+                println!("Transaction failed: {}", e);
+                return Err(StakingError::TransactionFailed(format!("Transaction failed: {}", e)));
+            }
+        }
+    }
+
+    // Sign with wallet
+    let message_bytes = transaction.message.serialize();
+    let signature_bytes = signer.sign_message(&message_bytes).await
+        .map_err(|e| StakingError::WalletError(format!("Failed to sign: {}", e)))?;
+
+    let signature = SolanaSignature::from(
+        <[u8; 64]>::try_from(signature_bytes.as_slice())
+            .map_err(|_| StakingError::WalletError("Invalid signature length".to_string()))?
+    );
+
+    transaction.signatures[0] = signature;
+
     // Add wallet signature
     legacy_transaction.signatures[0] = signature;
 
@@ -757,6 +834,7 @@ pub async fn withdraw_stake_account(
     stake_account: &DetailedStakeAccount,
     wallet_info: Option<&WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
+    mwa_pubkey: Option<String>,
     rpc_url: Option<&str>,
 ) -> Result<String, StakingError> {
     println!("WITHDRAW: Starting for stake account: {}", stake_account.pubkey);
@@ -781,16 +859,15 @@ pub async fn withdraw_stake_account(
     // Create transaction client
     let transaction_client = TransactionClient::new(rpc_url);
     
-    // Create signer
-    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
-        Box::new(HardwareSigner::from_wallet(hw.clone()))
-    } else if let Some(w) = wallet_info {
-        let wallet = Wallet::from_wallet_info(w)
-            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
-        Box::new(SoftwareSigner::new(wallet))
-    } else {
-        return Err(StakingError::WalletError("No wallet provided".to_string()));
-    };
+    let signer = select_signer(
+        wallet_info.cloned(),
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    )
+    .map_err(StakingError::WalletError)?;
 
     // Get user pubkey (this will be both the destination and withdraw authority)
     let user_pubkey_str = signer.get_public_key().await
@@ -822,12 +899,12 @@ pub async fn withdraw_stake_account(
 
     // Add Jito tips if enabled AND not using hardware wallet
     let jito_settings = get_current_jito_settings();
-    if jito_settings.jito_tx && hardware_wallet.is_none() {
+    if jito_settings.jito_tx && !signer.is_hardware() {
         println!("Adding Jito tips");
         if let Err(e) = add_jito_tips(&user_pubkey, &mut instructions) {
             println!("Jito tips failed: {}, continuing", e);
         }
-    } else if hardware_wallet.is_some() {
+    } else if signer.is_hardware() {
         println!("Hardware wallet detected - skipping Jito tips");
     }
 
@@ -844,6 +921,31 @@ pub async fn withdraw_stake_account(
         message: VersionedMessage::Legacy(message),
     };
     
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let unsigned_tx_bytes = bincode::serialize(&transaction)
+            .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+            .await
+            .map_err(|e| StakingError::WalletError(format!("Failed to sign via MWA: {}", e)))?;
+        let encoded = bs58::encode(signed_tx_bytes).into_string();
+
+        println!("Sending withdraw transaction ({} bytes)", encoded.len());
+
+        match transaction_client.send_transaction(&encoded).await {
+            Ok(sig) => {
+                println!("Withdraw successful!");
+                println!("Transaction: {}", sig);
+                println!("Explorer: https://explorer.solana.com/tx/{}?cluster=mainnet", sig);
+                return Ok(sig);
+            }
+            Err(e) => {
+                println!("Transaction failed: {}", e);
+                return Err(StakingError::TransactionFailed(format!("Transaction failed: {}", e)));
+            }
+        }
+    }
+
     // Sign transaction
     let message_bytes = transaction.message.serialize();
     let signature_bytes = signer.sign_message(&message_bytes).await

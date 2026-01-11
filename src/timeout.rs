@@ -17,8 +17,8 @@ use std::str::FromStr;
 /// Timeout program ID (deployed on mainnet)
 pub const TIMEOUT_PROGRAM_ID: &str = "23MzuyVH6EKGbUHq7GjBY6ydSCVoZQYDmzeKVdDBKWNQ";
 
-/// Default slot window for timeout (roughly a few seconds on mainnet)
-pub const DEFAULT_SLOT_WINDOW: u64 = 24;
+/// Default slot window for timeout (roughly under a minute on mainnet)
+pub const DEFAULT_SLOT_WINDOW: u64 = 120;
 
 /// Clock sysvar ID (required account for timeout instruction)
 pub const CLOCK_SYSVAR: Pubkey = sysvar::clock::ID;

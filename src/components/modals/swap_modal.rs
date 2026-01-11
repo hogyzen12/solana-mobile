@@ -7,10 +7,8 @@ use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
 use crate::transaction::TransactionClient;
 use crate::components::common::Token;
-use crate::signing::hardware::HardwareSigner;
-use crate::signing::software::SoftwareSigner;
-use crate::signing::TransactionSigner;
-use crate::wallet::Wallet;
+use crate::signing::{select_signer, TransactionSigner};
+use crate::WalletState;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -263,6 +261,25 @@ async fn sign_jupiter_transaction(
     
     println!("📄 Decoded transaction: {} bytes", unsigned_tx_bytes.len());
     
+    // If MWA is active, ask Seed Vault to sign the full transaction and return it.
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        match crate::signing::mwa::MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes).await {
+            Ok(signed_tx_bytes) => {
+                let signed_transaction_b64 = base64::encode(&signed_tx_bytes);
+                println!(
+                    "🎯 MWA signed transaction: {} bytes -> {} chars base64",
+                    signed_tx_bytes.len(),
+                    signed_transaction_b64.len()
+                );
+                return Ok(signed_transaction_b64);
+            }
+            Err(e) => {
+                return Err(format!("Failed to sign transaction via MWA: {}", e));
+            }
+        }
+    }
+
     // Deserialize the transaction
     let mut transaction: VersionedTransaction = match bincode::deserialize(&unsigned_tx_bytes) {
         Ok(tx) => tx,
@@ -638,6 +655,9 @@ pub fn SwapTransactionSuccessModal(
     // Explorer links - Solscan and Orb
     let solscan_url = format!("https://solscan.io/tx/{}", signature);
     let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
+    let is_android = cfg!(target_os = "android");
+    let solscan_url_click = solscan_url.clone();
+    let orb_url_click = orb_url.clone();
     
     rsx! {
         div {
@@ -765,41 +785,77 @@ pub fn SwapTransactionSuccessModal(
 
                 div {
                     style: "display: flex; gap: 8px;",
-                    a {
-                        style: "
-                            flex: 1;
-                            text-decoration: none;
-                            background: #1f2937;
-                            border: 1px solid #374151;
-                            color: #e5e7eb;
-                            padding: 10px 12px;
-                            border-radius: 10px;
-                            text-align: center;
-                            font-size: 13px;
-                            font-weight: 600;
-                        ",
-                        href: "{solscan_url}",
-                        target: "_blank",
-                        rel: "noopener noreferrer",
-                        "Solscan"
+                    if is_android {
+                        button {
+                            style: "
+                                flex: 1;
+                                background: #1f2937;
+                                border: 1px solid #374151;
+                                color: #e5e7eb;
+                                padding: 10px 12px;
+                                border-radius: 10px;
+                                text-align: center;
+                                font-size: 13px;
+                                font-weight: 600;
+                            ",
+                            onclick: move |_| crate::ffi::open_external_url_from_dioxus(&solscan_url_click),
+                            "Solscan"
+                        }
                     }
-                    a {
-                        style: "
-                            flex: 1;
-                            text-decoration: none;
-                            background: #1f2937;
-                            border: 1px solid #374151;
-                            color: #e5e7eb;
-                            padding: 10px 12px;
-                            border-radius: 10px;
-                            text-align: center;
-                            font-size: 13px;
-                            font-weight: 600;
-                        ",
-                        href: "{orb_url}",
-                        target: "_blank",
-                        rel: "noopener noreferrer",
-                        "Orb"
+                    if is_android {
+                        button {
+                            style: "
+                                flex: 1;
+                                background: #1f2937;
+                                border: 1px solid #374151;
+                                color: #e5e7eb;
+                                padding: 10px 12px;
+                                border-radius: 10px;
+                                text-align: center;
+                                font-size: 13px;
+                                font-weight: 600;
+                            ",
+                            onclick: move |_| crate::ffi::open_external_url_from_dioxus(&orb_url_click),
+                            "Orb"
+                        }
+                    }
+                    if !is_android {
+                        a {
+                            style: "
+                                flex: 1;
+                                text-decoration: none;
+                                background: #1f2937;
+                                border: 1px solid #374151;
+                                color: #e5e7eb;
+                                padding: 10px 12px;
+                                border-radius: 10px;
+                                text-align: center;
+                                font-size: 13px;
+                                font-weight: 600;
+                            ",
+                            href: "{solscan_url}",
+                            rel: "noopener noreferrer",
+                            "Solscan"
+                        }
+                    }
+                    if !is_android {
+                        a {
+                            style: "
+                                flex: 1;
+                                text-decoration: none;
+                                background: #1f2937;
+                                border: 1px solid #374151;
+                                color: #e5e7eb;
+                                padding: 10px 12px;
+                                border-radius: 10px;
+                                text-align: center;
+                                font-size: 13px;
+                                font-weight: 600;
+                            ",
+                            href: "{orb_url}",
+                            rel: "noopener noreferrer",
+                            "Orb"
+                        }
                     }
                 }
             }
@@ -838,6 +894,8 @@ pub fn SwapModal(
     let mut transaction_signature = use_signal(|| "".to_string());
     let mut was_hardware_transaction = use_signal(|| false);
     let mut show_hardware_approval = use_signal(|| false);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     // Jupiter Ultra API state (simple order + execute)
     let mut jupiter_order = use_signal(||None as Option<JupiterUltraOrderResponse>);
@@ -1693,8 +1751,20 @@ pub fn SwapModal(
                             let unsigned_tx_b64 = base64::encode(&unsigned_tx_bytes);
                             
                             // Continue with signing flow
-                            // Determine if this is a hardware wallet transaction
-                            let is_hardware = hw_clone.is_some();
+                            let mwa_pubkey = {
+                                #[cfg(target_os = "android")]
+                                {
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                        WalletState::None => None,
+                                    }
+                                }
+                                #[cfg(not(target_os = "android"))]
+                                {
+                                    None
+                                }
+                            };
+                            let is_hardware = hw_clone.is_some() && mwa_pubkey.is_none();
                             was_hardware_transaction.set(is_hardware);
                             
                             if is_hardware {
@@ -1704,23 +1774,16 @@ pub fn SwapModal(
                             println!("🔐 Signing Titan transaction...");
                             
                             // Create the appropriate signer
-                            let signing_result = if let Some(hw) = hw_clone {
-                                println!("💻 Using hardware wallet signer");
-                                let hw_signer = HardwareSigner::from_wallet(hw);
-                                sign_jupiter_transaction(&hw_signer, &unsigned_tx_b64).await
-                            } else if let Some(wallet_info) = wallet_info_clone {
-                                println!("🔑 Using software wallet signer");
-                                match Wallet::from_wallet_info(&wallet_info) {
-                                    Ok(wallet) => {
-                                        let sw_signer = SoftwareSigner::new(wallet);
-                                        sign_jupiter_transaction(&sw_signer, &unsigned_tx_b64).await
-                                    }
-                                    Err(e) => {
-                                        Err(format!("Failed to load wallet: {}", e))
-                                    }
-                                }
-                            } else {
-                                Err("No wallet available for signing".to_string())
+                            let signing_result = match select_signer(
+                                wallet_info_clone,
+                                hw_clone,
+                                #[cfg(target_os = "android")]
+                                mwa_pubkey,
+                                #[cfg(not(target_os = "android"))]
+                                None,
+                            ) {
+                                Ok(signer) => sign_jupiter_transaction(&signer, &unsigned_tx_b64).await,
+                                Err(err) => Err(err),
                             };
                             
                             if is_hardware {
@@ -1760,9 +1823,42 @@ pub fn SwapModal(
                                         println!("[TPU] Using pre-initialized TransactionClient with TPU ready");
                                         
                                         // Submit directly to Solana RPC (via TPU + RPC in parallel)
-                                        match tx_client.send_transaction(&signed_tx_b58).await {
+                                        match tx_client
+                                            .send_transaction_with_options(
+                                                &signed_tx_b58,
+                                                false,
+                                                "confirmed",
+                                                Some(5),
+                                            )
+                                            .await
+                                        {
                                             Ok(signature) => {
-                                                println!("✅ Titan swap executed successfully! Signature: {}", signature);
+                                                println!("✅ Titan swap submitted! Signature: {}", signature);
+
+                                                let confirmed = match tx_client
+                                                    .confirm_transaction_with_timeout(&signature, std::time::Duration::from_secs(45))
+                                                    .await
+                                                {
+                                                    Ok(status) => status,
+                                                    Err(e) => {
+                                                        println!("❌ Failed to confirm Titan swap: {}", e);
+                                                        swapping.set(false);
+                                                        error_message.set(Some(format!("Swap confirmation error: {}", e)));
+                                                        return;
+                                                    }
+                                                };
+
+                                                if !confirmed {
+                                                    println!("❌ Titan swap not confirmed within timeout");
+                                                    swapping.set(false);
+                                                    error_message.set(Some(format!(
+                                                        "Swap submitted but not confirmed in time. Signature: {}",
+                                                        signature
+                                                    )));
+                                                    return;
+                                                }
+
+                                                println!("✅ Titan swap confirmed! Signature: {}", signature);
                                                 transaction_signature.set(signature);
                                                 swapping.set(false);
                                                 show_success_modal.set(true);
@@ -1814,8 +1910,20 @@ pub fn SwapModal(
                         let request_id = order.request_id.clone();
                         
                         spawn(async move {
-                            // Determine if hardware wallet
-                            let is_hardware = hw_clone.is_some();
+                            let mwa_pubkey = {
+                                #[cfg(target_os = "android")]
+                                {
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                        WalletState::None => None,
+                                    }
+                                }
+                                #[cfg(not(target_os = "android"))]
+                                {
+                                    None
+                                }
+                            };
+                            let is_hardware = hw_clone.is_some() && mwa_pubkey.is_none();
                             was_hardware_transaction.set(is_hardware);
                             
                             if is_hardware {
@@ -1825,23 +1933,16 @@ pub fn SwapModal(
                             println!("🔐 Signing Jupiter Ultra transaction...");
                             
                             // Sign transaction
-                            let signing_result = if let Some(hw) = hw_clone {
-                                println!("💻 Using hardware wallet signer");
-                                let hw_signer = HardwareSigner::from_wallet(hw);
-                                sign_jupiter_transaction(&hw_signer, &unsigned_tx_b64).await
-                            } else if let Some(wallet_info) = wallet_info_clone {
-                                println!("🔑 Using software wallet signer");
-                                match Wallet::from_wallet_info(&wallet_info) {
-                                    Ok(wallet) => {
-                                        let sw_signer = SoftwareSigner::new(wallet);
-                                        sign_jupiter_transaction(&sw_signer, &unsigned_tx_b64).await
-                                    }
-                                    Err(e) => {
-                                        Err(format!("Failed to load wallet: {}", e))
-                                    }
-                                }
-                            } else {
-                                Err("No wallet available for signing".to_string())
+                            let signing_result = match select_signer(
+                                wallet_info_clone,
+                                hw_clone,
+                                #[cfg(target_os = "android")]
+                                mwa_pubkey,
+                                #[cfg(not(target_os = "android"))]
+                                None,
+                            ) {
+                                Ok(signer) => sign_jupiter_transaction(&signer, &unsigned_tx_b64).await,
+                                Err(err) => Err(err),
                             };
                             
                             if is_hardware {
@@ -2046,8 +2147,20 @@ error_message.set(Some(format!("Failed to sign: {}", e)));
                             // Convert to base64 for signing
                             let unsigned_tx_b64 = base64::encode(&unsigned_tx_bytes);
                             
-                            // Determine if hardware wallet
-                            let is_hardware = hw_clone.is_some();
+                            let mwa_pubkey = {
+                                #[cfg(target_os = "android")]
+                                {
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                        WalletState::None => None,
+                                    }
+                                }
+                                #[cfg(not(target_os = "android"))]
+                                {
+                                    None
+                                }
+                            };
+                            let is_hardware = hw_clone.is_some() && mwa_pubkey.is_none();
                             was_hardware_transaction.set(is_hardware);
                             
                             if is_hardware {
@@ -2057,23 +2170,16 @@ error_message.set(Some(format!("Failed to sign: {}", e)));
                             println!("🔐 Signing Dflow transaction...");
                             
                             // Sign transaction
-                            let signing_result = if let Some(hw) = hw_clone {
-                                println!("💻 Using hardware wallet signer");
-                                let hw_signer = HardwareSigner::from_wallet(hw);
-                                sign_jupiter_transaction(&hw_signer, &unsigned_tx_b64).await
-                            } else if let Some(wallet_info) = wallet_info_clone {
-                                println!("🔑 Using software wallet signer");
-                                match Wallet::from_wallet_info(&wallet_info) {
-                                    Ok(wallet) => {
-                                        let sw_signer = SoftwareSigner::new(wallet);
-                                        sign_jupiter_transaction(&sw_signer, &unsigned_tx_b64).await
-                                    }
-                                    Err(e) => {
-                                        Err(format!("Failed to load wallet: {}", e))
-                                    }
-                                }
-                            } else {
-                                Err("No wallet available for signing".to_string())
+                            let signing_result = match select_signer(
+                                wallet_info_clone,
+                                hw_clone,
+                                #[cfg(target_os = "android")]
+                                mwa_pubkey,
+                                #[cfg(not(target_os = "android"))]
+                                None,
+                            ) {
+                                Ok(signer) => sign_jupiter_transaction(&signer, &unsigned_tx_b64).await,
+                                Err(err) => Err(err),
                             };
                             
                             if is_hardware {
@@ -2112,9 +2218,42 @@ error_message.set(Some(format!("Failed to sign: {}", e)));
                                         // Submit via pre-initialized TPU client (initialized at app startup)
                                         println!("[TPU] Using pre-initialized TransactionClient with TPU ready");
                                         
-                                        match tx_client.send_transaction(&signed_tx_b58).await {
+                                        match tx_client
+                                            .send_transaction_with_options(
+                                                &signed_tx_b58,
+                                                false,
+                                                "confirmed",
+                                                Some(5),
+                                            )
+                                            .await
+                                        {
                                             Ok(signature) => {
-                                                println!("✅ Dflow swap executed successfully! Signature: {}", signature);
+                                                println!("✅ Dflow swap submitted! Signature: {}", signature);
+
+                                                let confirmed = match tx_client
+                                                    .confirm_transaction_with_timeout(&signature, std::time::Duration::from_secs(45))
+                                                    .await
+                                                {
+                                                    Ok(status) => status,
+                                                    Err(e) => {
+                                                        println!("❌ Failed to confirm Dflow swap: {}", e);
+                                                        swapping.set(false);
+                                                        error_message.set(Some(format!("Swap confirmation error: {}", e)));
+                                                        return;
+                                                    }
+                                                };
+
+                                                if !confirmed {
+                                                    println!("❌ Dflow swap not confirmed within timeout");
+                                                    swapping.set(false);
+                                                    error_message.set(Some(format!(
+                                                        "Swap submitted but not confirmed in time. Signature: {}",
+                                                        signature
+                                                    )));
+                                                    return;
+                                                }
+
+                                                println!("✅ Dflow swap confirmed! Signature: {}", signature);
                                                 transaction_signature.set(signature);
                                                 swapping.set(false);
                                                 show_success_modal.set(true);

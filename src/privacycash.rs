@@ -15,6 +15,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, Notify};
 
 use crate::signing::TransactionSigner;
+#[cfg(target_os = "android")]
+use crate::signing::mwa::MwaSigner;
 
 const PRIVACY_CASH_API_URL: &str = "https://api3.privacycash.org";
 const SIGN_MESSAGE: &str = "Privacy Money account sign in";
@@ -634,6 +636,16 @@ pub async fn sign_transaction(
     }
 
     let message_bytes = tx.message.serialize();
+
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let unsigned_tx_bytes = bincode::serialize(tx)?;
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes).await?;
+        let signed_tx: VersionedTransaction = bincode::deserialize(&signed_tx_bytes)?;
+        *tx = signed_tx;
+        return Ok(());
+    }
+
     let signature_bytes = signer.sign_message(&message_bytes).await?;
 
     if signature_bytes.len() != 64 {

@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::components::common::Token;
 use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
-use crate::signing::hardware::HardwareSigner;
-use crate::signing::software::SoftwareSigner;
-use crate::signing::TransactionSigner;
-use crate::wallet::Wallet;
+use crate::signing::{select_signer, TransactionSigner};
 use std::sync::Arc;
 use reqwest::header;
 use solana_sdk::{
@@ -17,6 +14,10 @@ use solana_sdk::{
 use base64;
 use bincode;
 
+#[cfg(target_os = "android")]
+use crate::signing::mwa::MwaSigner;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterLendToken {
     pub id: i32,
@@ -97,6 +98,14 @@ async fn sign_jupiter_lend_transaction(
         Ok(bytes) => bytes,
         Err(e) => return Err(format!("Failed to decode base64 transaction: {}", e)),
     };
+
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+            .await
+            .map_err(|e| format!("MWA signing failed: {e}"))?;
+        return Ok(base64::encode(&signed_tx_bytes));
+    }
     
     // Deserialize the transaction
     let mut transaction: VersionedTransaction = match bincode::deserialize(&unsigned_tx_bytes) {
@@ -186,7 +195,9 @@ pub fn LendModal(
 ) -> Element {
     println!(" LendModal component rendered with Jupiter Lend API!");
 
-    let wallet_address = use_signal(|| wallet.as_ref().map(|w| w.address.clone()));
+    let mut wallet_address = use_signal(|| wallet.as_ref().map(|w| w.address.clone()));
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     // State management
     let mut selected_symbol = use_signal(|| None::<String>);
@@ -209,6 +220,19 @@ pub fn LendModal(
     let mut transaction_signature = use_signal(|| "".to_string());
     let mut was_hardware_transaction = use_signal(|| false);
     let mut show_hardware_approval = use_signal(|| false);
+
+    #[cfg(target_os = "android")]
+    {
+        let mut wallet_address = wallet_address.clone();
+        let wallet_info = wallet.clone();
+        use_effect(move || {
+            let addr = match mwa_wallet_state() {
+                WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                WalletState::None => wallet_info.as_ref().map(|w| w.address.clone()),
+            };
+            wallet_address.set(addr);
+        });
+    }
 
     // Fetch available lending tokens on mount
     use_effect(move || {
@@ -1071,9 +1095,7 @@ pub fn LendModal(
                                 };
                                 
                                 processing.set(true);
-                                if has_hardware {
-                                    show_hardware_approval.set(true);
-                                }
+                                show_hardware_approval.set(false);
                                 
                                 let wallet_clone = wallet.clone();
                                 let hardware_wallet_clone = hardware_wallet.clone();
@@ -1082,12 +1104,27 @@ pub fn LendModal(
                                 let amount_clone = amount();
                                 let selected_lend_token_clone = selected_lend_token();
                                 let wallet_address_clone = wallet_address();
+                                let mwa_pubkey = {
+                                    #[cfg(target_os = "android")]
+                                    {
+                                        match mwa_wallet_state() {
+                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                            WalletState::None => None,
+                                        }
+                                    }
+                                    #[cfg(not(target_os = "android"))]
+                                    {
+                                        None
+                                    }
+                                };
                                 
                                 spawn(async move {
+                                    let mut had_error = false;
                                     let sig: String = match mode_clone.as_str() {
                                         "deposit" => {
                                             if let Some(lend_token) = selected_lend_token_clone {
-                                                if let Some(signer_str) = wallet_address_clone {
+                                                let signer_str = mwa_pubkey.clone().or(wallet_address_clone);
+                                                if let Some(signer_str) = signer_str {
                                                     let decimals = lend_token.decimals;
                                                     let amount_raw = ((amt_f64 * 10.0f64.powi(decimals)) as u64).to_string();
                                                     let asset = lend_token.asset_address.clone();
@@ -1123,51 +1160,71 @@ pub fn LendModal(
                                                     };
                                                     
                                                     if tx_base64.is_empty() {
-                                                        "No transaction received".to_string()
+                                                        had_error = true;
+                                                        let msg = "No transaction received".to_string();
+                                                        error_message.set(Some(msg.clone()));
+                                                        msg
                                                     } else {
-                                                        let is_hardware = hardware_wallet_clone.is_some();
-                                                        was_hardware_transaction.set(is_hardware);
-                                                        
-                                                        let signer_result = if is_hardware {
-                                                            if let Some(hw) = hardware_wallet_clone {
-                                                                let hw_signer = HardwareSigner::from_wallet(hw);
-                                                                sign_jupiter_lend_transaction(&hw_signer, &tx_base64).await
-                                                            } else {
-                                                                Err("No hardware wallet".to_string())
-                                                            }
-                                                        } else if let Some(w) = wallet_clone {
-                                                            match Wallet::from_wallet_info(&w) {
-                                                                Ok(wallet) => {
-                                                                    let sw_signer = SoftwareSigner::new(wallet);
-                                                                    sign_jupiter_lend_transaction(&sw_signer, &tx_base64).await
+                                                        match select_signer(
+                                                            wallet_clone.clone(),
+                                                            hardware_wallet_clone.clone(),
+                                                            #[cfg(target_os = "android")]
+                                                            mwa_pubkey.clone(),
+                                                            #[cfg(not(target_os = "android"))]
+                                                            None,
+                                                        ) {
+                                                            Ok(signer) => {
+                                                                let is_hardware = signer.is_hardware();
+                                                                if is_hardware {
+                                                                    show_hardware_approval.set(true);
                                                                 }
-                                                                Err(e) => Err(format!("Failed to load wallet: {}", e))
-                                                            }
-                                                        } else {
-                                                            Err("No wallet available".to_string())
-                                                        };
-                                                        
-                                                        match signer_result {
-                                                            Ok(signed_b64) => {
-                                                                let rpc_url = custom_rpc_clone.unwrap_or("https://johna-k3cr1v-fast-mainnet.helius-rpc.com".to_string());
-                                                                match execute_jupiter_lend_transaction(signed_b64, rpc_url).await {
-                                                                    Ok(sig) => sig,
-                                                                    Err(e) => e
+                                                                was_hardware_transaction.set(is_hardware);
+                                                                let signer_result =
+                                                                    sign_jupiter_lend_transaction(&signer, &tx_base64).await;
+                                                                
+                                                                match signer_result {
+                                                                    Ok(signed_b64) => {
+                                                                        let rpc_url = custom_rpc_clone.unwrap_or("https://johna-k3cr1v-fast-mainnet.helius-rpc.com".to_string());
+                                                                        match execute_jupiter_lend_transaction(signed_b64, rpc_url).await {
+                                                                            Ok(sig) => sig,
+                                                                            Err(e) => {
+                                                                                had_error = true;
+                                                                                error_message.set(Some(e.clone()));
+                                                                                e
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        had_error = true;
+                                                                        error_message.set(Some(e.clone()));
+                                                                        e
+                                                                    }
                                                                 }
                                                             }
-                                                            Err(e) => e
+                                                            Err(err) => {
+                                                                had_error = true;
+                                                                error_message.set(Some(err.clone()));
+                                                                err
+                                                            }
                                                         }
                                                     }
                                                 } else {
-                                                    "No wallet address".to_string()
+                                                    had_error = true;
+                                                    let msg = "No wallet address".to_string();
+                                                    error_message.set(Some(msg.clone()));
+                                                    msg
                                                 }
                                             } else {
-                                                "No selected token".to_string()
+                                                had_error = true;
+                                                let msg = "No selected token".to_string();
+                                                error_message.set(Some(msg.clone()));
+                                                msg
                                             }
                                         }
                                         "withdraw" => {
                                             if let Some(lend_token) = selected_lend_token_clone {
-                                                if let Some(signer_str) = wallet_address_clone {
+                                                let signer_str = mwa_pubkey.clone().or(wallet_address_clone);
+                                                if let Some(signer_str) = signer_str {
                                                     let decimals = lend_token.decimals;
                                                     let amount_raw = ((amt_f64 * 10.0f64.powi(decimals)) as u64).to_string();
                                                     let asset = lend_token.asset_address.clone();
@@ -1203,46 +1260,65 @@ pub fn LendModal(
                                                     };
                                                     
                                                     if tx_base64.is_empty() {
-                                                        "No transaction received".to_string()
+                                                        had_error = true;
+                                                        let msg = "No transaction received".to_string();
+                                                        error_message.set(Some(msg.clone()));
+                                                        msg
                                                     } else {
-                                                        let is_hardware = hardware_wallet_clone.is_some();
-                                                        was_hardware_transaction.set(is_hardware);
-                                                        
-                                                        let signer_result = if is_hardware {
-                                                            if let Some(hw) = hardware_wallet_clone {
-                                                                let hw_signer = HardwareSigner::from_wallet(hw);
-                                                                sign_jupiter_lend_transaction(&hw_signer, &tx_base64).await
-                                                            } else {
-                                                                Err("No hardware wallet".to_string())
-                                                            }
-                                                        } else if let Some(w) = wallet_clone {
-                                                            match Wallet::from_wallet_info(&w) {
-                                                                Ok(wallet) => {
-                                                                    let sw_signer = SoftwareSigner::new(wallet);
-                                                                    sign_jupiter_lend_transaction(&sw_signer, &tx_base64).await
+                                                        match select_signer(
+                                                            wallet_clone.clone(),
+                                                            hardware_wallet_clone.clone(),
+                                                            #[cfg(target_os = "android")]
+                                                            mwa_pubkey.clone(),
+                                                            #[cfg(not(target_os = "android"))]
+                                                            None,
+                                                        ) {
+                                                            Ok(signer) => {
+                                                                let is_hardware = signer.is_hardware();
+                                                                if is_hardware {
+                                                                    show_hardware_approval.set(true);
                                                                 }
-                                                                Err(e) => Err(format!("Failed to load wallet: {}", e))
-                                                            }
-                                                        } else {
-                                                            Err("No wallet available".to_string())
-                                                        };
-                                                        
-                                                        match signer_result {
-                                                            Ok(signed_b64) => {
-                                                                let rpc_url = custom_rpc_clone.unwrap_or("https://johna-k3cr1v-fast-mainnet.helius-rpc.com".to_string());
-                                                                match execute_jupiter_lend_transaction(signed_b64, rpc_url).await {
-                                                                    Ok(sig) => sig,
-                                                                    Err(e) => e
+                                                                was_hardware_transaction.set(is_hardware);
+                                                                let signer_result =
+                                                                    sign_jupiter_lend_transaction(&signer, &tx_base64).await;
+                                                                
+                                                                match signer_result {
+                                                                    Ok(signed_b64) => {
+                                                                        let rpc_url = custom_rpc_clone.unwrap_or("https://johna-k3cr1v-fast-mainnet.helius-rpc.com".to_string());
+                                                                        match execute_jupiter_lend_transaction(signed_b64, rpc_url).await {
+                                                                            Ok(sig) => sig,
+                                                                            Err(e) => {
+                                                                                had_error = true;
+                                                                                error_message.set(Some(e.clone()));
+                                                                                e
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        had_error = true;
+                                                                        error_message.set(Some(e.clone()));
+                                                                        e
+                                                                    }
                                                                 }
                                                             }
-                                                            Err(e) => e
+                                                            Err(err) => {
+                                                                had_error = true;
+                                                                error_message.set(Some(err.clone()));
+                                                                err
+                                                            }
                                                         }
                                                     }
                                                 } else {
-                                                    "No wallet address".to_string()
+                                                    had_error = true;
+                                                    let msg = "No wallet address".to_string();
+                                                    error_message.set(Some(msg.clone()));
+                                                    msg
                                                 }
                                             } else {
-                                                "No selected token".to_string()
+                                                had_error = true;
+                                                let msg = "No selected token".to_string();
+                                                error_message.set(Some(msg.clone()));
+                                                msg
                                             }
                                         }
                                         _ => {
@@ -1253,6 +1329,11 @@ pub fn LendModal(
                                         }
                                     };
                                     
+                                    if had_error || sig.is_empty() {
+                                        processing.set(false);
+                                        show_hardware_approval.set(false);
+                                        return;
+                                    }
                                     transaction_signature.set(sig);
                                     processing.set(false);
                                     show_hardware_approval.set(false);

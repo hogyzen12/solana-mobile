@@ -337,3 +337,72 @@ pub fn initiate_sign_message_from_dioxus(message: &[u8]) -> String {
 pub fn is_activity_available() -> bool {
     WRY_ACTIVITY.get().is_some()
 }
+
+/// Open an external URL via Android intent (main thread required).
+pub fn open_external_url_from_dioxus(url: &str) {
+    let activity_global_ref = match WRY_ACTIVITY.get() {
+        Some(glob_ref) => glob_ref,
+        None => {
+            log::error!("Error: WryActivity reference not available. Cannot open URL.");
+            return;
+        }
+    };
+
+    with_env(|env| {
+        let activity_obj = activity_global_ref.as_obj();
+        let url_jstring = match env.new_string(url) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("JNI error creating URL string: {:?}", e);
+                return;
+            }
+        };
+        let uri_obj = match env.call_static_method(
+            "android/net/Uri",
+            "parse",
+            "(Ljava/lang/String;)Landroid/net/Uri;",
+            &[JValue::from(&JObject::from(url_jstring))],
+        ) {
+            Ok(val) => match val.l() {
+                Ok(obj) => obj,
+                Err(e) => {
+                    log::error!("JNI error extracting Uri object: {:?}", e);
+                    return;
+                }
+            },
+            Err(e) => {
+                log::error!("JNI error calling Uri.parse: {:?}", e);
+                return;
+            }
+        };
+
+        let action = match env.new_string("android.intent.action.VIEW") {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("JNI error creating action string: {:?}", e);
+                return;
+            }
+        };
+
+        let intent_obj = match env.new_object(
+            "android/content/Intent",
+            "(Ljava/lang/String;Landroid/net/Uri;)V",
+            &[JValue::from(&JObject::from(action)), JValue::from(&uri_obj)],
+        ) {
+            Ok(obj) => obj,
+            Err(e) => {
+                log::error!("JNI error creating Intent: {:?}", e);
+                return;
+            }
+        };
+
+        if let Err(e) = env.call_method(
+            activity_obj,
+            "startActivity",
+            "(Landroid/content/Intent;)V",
+            &[JValue::from(&intent_obj)],
+        ) {
+            log::error!("JNI error starting activity for URL: {:?}", e);
+        }
+    });
+}

@@ -7,10 +7,11 @@ use std::sync::Arc;
 
 use crate::privacycash;
 use crate::hardware::HardwareWallet;
-use crate::signing::hardware::HardwareSigner;
-use crate::signing::{SignerType, TransactionSigner};
+use crate::signing::{select_signer, TransactionSigner};
 use crate::transaction::TransactionClient;
-use crate::wallet::{Wallet, WalletInfo};
+use crate::wallet::WalletInfo;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 
 const DEFAULT_RPC_URL: &str = "https://johna-k3cr1v-fast-mainnet.helius-rpc.com";
 const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -63,6 +64,8 @@ pub fn PrivacyCashModal(
     let mut selected_token = use_signal(|| 0usize);
     let mut auth_signature = use_signal(|| None as Option<String>);
     let mut auth_pubkey = use_signal(|| None as Option<String>);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     let wallet_info = wallet.clone();
     let hw_wallet_for_refresh = hardware_wallet.clone();
@@ -81,22 +84,33 @@ pub fn PrivacyCashModal(
         balance_loading.set(true);
 
         spawn(async move {
-            let signer = if let Some(hw) = hw_wallet {
-                SignerType::Hardware(HardwareSigner::from_wallet(hw))
-            } else {
-                let Some(wallet_info) = wallet_info else {
-                    error.set(Some("No wallet selected".to_string()));
+            let mwa_pubkey = {
+                #[cfg(target_os = "android")]
+                {
+                    match mwa_wallet_state() {
+                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                        WalletState::None => None,
+                    }
+                }
+                #[cfg(not(target_os = "android"))]
+                {
+                    None
+                }
+            };
+            let signer = match select_signer(
+                wallet_info.clone(),
+                hw_wallet,
+                #[cfg(target_os = "android")]
+                mwa_pubkey,
+                #[cfg(not(target_os = "android"))]
+                None,
+            ) {
+                Ok(signer) => signer,
+                Err(err) => {
+                    error.set(Some(err));
                     balance_loading.set(false);
                     return;
-                };
-
-                let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
-                    error.set(Some("Failed to load wallet".to_string()));
-                    balance_loading.set(false);
-                    return;
-                };
-
-                SignerType::from_wallet(wallet)
+                }
             };
             let Ok(authority) = signer.get_public_key().await else {
                 error.set(Some("Failed to get public key".to_string()));
@@ -182,22 +196,33 @@ pub fn PrivacyCashModal(
                     return;
                 }
             };
-            let signer = if let Some(hw) = hw_wallet {
-                SignerType::Hardware(HardwareSigner::from_wallet(hw))
-            } else {
-                let Some(wallet_info) = wallet_info else {
-                    error.set(Some("No wallet selected".to_string()));
+            let mwa_pubkey = {
+                #[cfg(target_os = "android")]
+                {
+                    match mwa_wallet_state() {
+                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                        WalletState::None => None,
+                    }
+                }
+                #[cfg(not(target_os = "android"))]
+                {
+                    None
+                }
+            };
+            let signer = match select_signer(
+                wallet_info.clone(),
+                hw_wallet,
+                #[cfg(target_os = "android")]
+                mwa_pubkey,
+                #[cfg(not(target_os = "android"))]
+                None,
+            ) {
+                Ok(signer) => signer,
+                Err(err) => {
+                    error.set(Some(err));
                     busy.set(false);
                     return;
-                };
-
-                let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
-                    error.set(Some("Failed to load wallet".to_string()));
-                    busy.set(false);
-                    return;
-                };
-
-                SignerType::from_wallet(wallet)
+                }
             };
             let Ok(authority) = signer.get_public_key().await else {
                 error.set(Some("Failed to get public key".to_string()));
@@ -319,22 +344,33 @@ pub fn PrivacyCashModal(
                     return;
                 }
             };
-            let signer = if let Some(hw) = hw_wallet {
-                SignerType::Hardware(HardwareSigner::from_wallet(hw))
-            } else {
-                let Some(wallet_info) = wallet_info else {
-                    error.set(Some("No wallet selected".to_string()));
+            let mwa_pubkey = {
+                #[cfg(target_os = "android")]
+                {
+                    match mwa_wallet_state() {
+                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                        WalletState::None => None,
+                    }
+                }
+                #[cfg(not(target_os = "android"))]
+                {
+                    None
+                }
+            };
+            let signer = match select_signer(
+                wallet_info.clone(),
+                hw_wallet,
+                #[cfg(target_os = "android")]
+                mwa_pubkey,
+                #[cfg(not(target_os = "android"))]
+                None,
+            ) {
+                Ok(signer) => signer,
+                Err(err) => {
+                    error.set(Some(err));
                     busy.set(false);
                     return;
-                };
-
-                let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
-                    error.set(Some("Failed to load wallet".to_string()));
-                    busy.set(false);
-                    return;
-                };
-
-                SignerType::from_wallet(wallet)
+                }
             };
             let Ok(authority) = signer.get_public_key().await else {
                 error.set(Some("Failed to get public key".to_string()));

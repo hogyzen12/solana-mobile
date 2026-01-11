@@ -2,11 +2,10 @@
 
 use dioxus::prelude::*;
 use crate::components::common::Token;
-use crate::wallet::{Wallet, WalletInfo};
+use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
 use crate::transaction::TransactionClient;
-use crate::signing::{SignerType, hardware::HardwareSigner};
-use crate::signing::TransactionSigner;
+use crate::signing::{select_signer, TransactionSigner};
 use crate::components::address_input::AddressInput;
 use solana_sdk::{
     pubkey::Pubkey,
@@ -18,6 +17,8 @@ use solana_system_interface::instruction as system_instruction;
 use spl_token::instruction as token_instruction;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use spl_associated_token_account::instruction::create_associated_token_account;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 use serde::Deserialize;
 use reqwest;
 use std::sync::Arc;
@@ -133,6 +134,7 @@ async fn execute_eject<F>(
     wallet: Option<WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
     custom_rpc: Option<String>,
+    mwa_pubkey: Option<String>,
     recipient: Option<Pubkey>,
     has_send: bool,
     mut status_callback: F,
@@ -142,23 +144,16 @@ where
 {
     println!("🚀 Starting EJECT execution for {} tokens", tokens.len());
 
-    // Get signer - following the same pattern as bulk_send_modal.rs
-    let signer: Box<dyn TransactionSigner> = if let Some(hw) = hardware_wallet {
-        // Use hardware wallet signer
-        Box::new(HardwareSigner::from_wallet(hw))
-    } else if let Some(wallet_info) = wallet {
-        // Use software wallet signer
-        match Wallet::from_wallet_info(&wallet_info) {
-            Ok(wallet) => {
-                let signer = SignerType::from_wallet(wallet);
-                Box::new(signer)
-            }
-            Err(e) => {
-                return Err(format!("Failed to load wallet: {}", e));
-            }
-        }
-    } else {
-        return Err("No wallet available".to_string());
+    let signer = match select_signer(
+        wallet,
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    ) {
+        Ok(signer) => signer,
+        Err(err) => return Err(err),
     };
 
     let user_pubkey_str = match signer.get_public_key().await {
@@ -204,7 +199,7 @@ where
                 status_callback(index, EjectTokenStatus::SwappingToSol);
 
                 // Sign and execute the swap transaction
-                match sign_and_execute_transaction(&unsigned_tx_b64, &*signer, &tx_client).await {
+                match sign_and_execute_transaction(&unsigned_tx_b64, &signer, &tx_client).await {
                     Ok(signature) => {
                         println!("✅ Swap successful: {}", signature);
                         last_signature = signature;
@@ -215,7 +210,7 @@ where
                         // Now close the token account
                         status_callback(index, EjectTokenStatus::ClosingAccount);
 
-                        match close_token_account(&token, &user_pubkey, &*signer, &tx_client).await {
+                        match close_token_account(&token, &user_pubkey, &signer, &tx_client).await {
                             Ok((close_sig, rent)) => {
                                 println!("✅ Closed token account: {}", close_sig);
                                 last_signature = close_sig;
@@ -242,7 +237,7 @@ where
 
                         // Fallback: try to close the account without swap
                         status_callback(index, EjectTokenStatus::ClosingAccount);
-                        match close_token_account(&token, &user_pubkey, &*signer, &tx_client).await {
+                        match close_token_account(&token, &user_pubkey, &signer, &tx_client).await {
                             Ok((sig, rent)) => {
                                 println!("✅ Closed account: {}", sig);
                                 last_signature = sig;
@@ -266,7 +261,7 @@ where
 
                 // Try to close the account anyway
                 status_callback(index, EjectTokenStatus::ClosingAccount);
-                match close_token_account(&token, &user_pubkey, &*signer, &tx_client).await {
+                match close_token_account(&token, &user_pubkey, &signer, &tx_client).await {
                     Ok((sig, rent)) => {
                         println!("✅ Closed account: {}", sig);
                         last_signature = sig;
@@ -305,7 +300,7 @@ where
             &user_pubkey,
             &recipient_pubkey,
             total_sol_reclaimed,
-            &*signer,
+            &signer,
             &tx_client
         ).await {
             Ok(sig) => {
@@ -1162,6 +1157,8 @@ pub fn EjectModal(
     let mut resolved_recipient = use_signal(|| Option::<Pubkey>::None);
     let mut show_processing_modal = use_signal(|| false);
     let mut processing_complete = use_signal(|| false);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     // Transaction state
     let mut transaction_signature = use_signal(|| "".to_string());
@@ -1642,6 +1639,19 @@ pub fn EjectModal(
                             // Execute EJECT asynchronously with status callback
                             spawn(async move {
                                 println!("🚀 Executing EJECT for {} tokens...", tokens_to_eject.len());
+                                let mwa_pubkey = {
+                                    #[cfg(target_os = "android")]
+                                    {
+                                        match mwa_wallet_state() {
+                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                            WalletState::None => None,
+                                        }
+                                    }
+                                    #[cfg(not(target_os = "android"))]
+                                    {
+                                        None
+                                    }
+                                };
 
                                 let status_callback = move |index: usize, status: EjectTokenStatus| {
                                     // Update the specific token's status
@@ -1669,6 +1679,7 @@ pub fn EjectModal(
                                     wallet_clone,
                                     hw_clone,
                                     rpc_clone,
+                                    mwa_pubkey,
                                     recipient_clone,
                                     send_sol_enabled() && resolved_recipient().is_some(),
                                     status_callback,

@@ -72,6 +72,7 @@ const PIN_CSS: Asset = asset!("/assets/pin-premium.css");
 
 // MWA IPC Channel Setup (Android only)
 #[cfg(target_os = "android")]
+#[derive(Debug)]
 pub enum MsgFromKotlin {
     Pubkey(String),
     SignedTransaction(String),
@@ -220,7 +221,8 @@ fn App() -> Element {
     let (privacy_js_src, wasm_url, zkey_url) = if cfg!(any(
         target_arch = "wasm32",
         target_os = "macos",
-        target_os = "ios"
+        target_os = "ios",
+        target_os = "android"
     )) {
         (
             PRIVACY_JS_URL.to_string(),

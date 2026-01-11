@@ -34,7 +34,7 @@ use crate::currency_utils::{
 use crate::components::modals::currency_modal::CurrencyModal;
 use crate::components::{LiquidMetalButton, LiquidMetalStatus};
 use crate::privacycash;
-use crate::signing::{SignerType, TransactionSigner};
+use crate::signing::{select_signer, TransactionSigner};
 // Temporarily disabled integrations for Solana 3.x testing
 use crate::components::modals::{WalletModal, RpcModal, SendModalWithHardware, SendTokenModal, HardwareWalletModal, ReceiveModal, JitoModal, StakeModal, BulkSendModal, EjectModal, SwapModal, TransactionHistoryModal, LendModal, ExportWalletModal, DeleteWalletModal, PrivacyCashModal, CarrotModal, BonkStakingModal, SquadsModal, QuantumVaultModal};
 #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android"), not(target_os = "ios")))]
@@ -1370,6 +1370,8 @@ pub fn WalletView() -> Element {
     let current_wallet = wallets.read().get(current_wallet_index()).cloned();
 
     let refresh_private_balance: Rc<RefCell<dyn FnMut()>> = {
+        #[cfg(target_os = "android")]
+        let mwa_wallet_state_for_privacy = mwa_wallet_state.clone();
         let wallets_signal = wallets.clone();
         let current_wallet_index_signal = current_wallet_index.clone();
         let rpc_signal = custom_rpc.clone();
@@ -1383,6 +1385,18 @@ pub fn WalletView() -> Element {
         let mut private_balance_ore = private_balance_ore.clone();
         let mut private_balance_ore_loading = private_balance_ore_loading.clone();
         Rc::new(RefCell::new(move || {
+            #[cfg(target_os = "android")]
+            if matches!(mwa_wallet_state_for_privacy(), WalletState::Pubkey(_)) {
+                private_balance_sol.set(None);
+                private_balance_usdc.set(None);
+                private_balance_usdt.set(None);
+                private_balance_ore.set(None);
+                private_balance_loading.set(false);
+                private_balance_usdc_loading.set(false);
+                private_balance_usdt_loading.set(false);
+                private_balance_ore_loading.set(false);
+                return;
+            }
             if hw_signal().is_some() {
                 private_balance_sol.set(None);
                 private_balance_usdc.set(None);
@@ -1418,14 +1432,36 @@ pub fn WalletView() -> Element {
                     private_balance_ore_loading.set(false);
                     return;
                 };
-                let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
-                    private_balance_loading.set(false);
-                    private_balance_usdc_loading.set(false);
-                    private_balance_usdt_loading.set(false);
-                    private_balance_ore_loading.set(false);
-                    return;
+                let mwa_pubkey = {
+                    #[cfg(target_os = "android")]
+                    {
+                        match mwa_wallet_state_for_privacy() {
+                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                            WalletState::None => None,
+                        }
+                    }
+                    #[cfg(not(target_os = "android"))]
+                    {
+                        None
+                    }
                 };
-                let signer = SignerType::from_wallet(wallet);
+                let signer = match select_signer(
+                    Some(wallet_info),
+                    None,
+                    #[cfg(target_os = "android")]
+                    mwa_pubkey,
+                    #[cfg(not(target_os = "android"))]
+                    None,
+                ) {
+                    Ok(signer) => signer,
+                    Err(_) => {
+                        private_balance_loading.set(false);
+                        private_balance_usdc_loading.set(false);
+                        private_balance_usdt_loading.set(false);
+                        private_balance_ore_loading.set(false);
+                        return;
+                    }
+                };
                 let Ok(authority) = signer.get_public_key().await else {
                     private_balance_loading.set(false);
                     private_balance_usdc_loading.set(false);

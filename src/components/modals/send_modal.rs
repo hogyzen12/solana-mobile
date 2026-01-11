@@ -3,13 +3,14 @@ use crate::wallet::{Wallet, WalletInfo};
 use crate::hardware::HardwareWallet;
 use crate::transaction::TransactionClient;
 use crate::signing::hardware::HardwareSigner;
-use crate::signing::{SignerType, TransactionSigner};
+use crate::signing::{select_signer, SignerType, TransactionSigner};
 use crate::privacycash;
 use crate::rpc;
 use crate::components::address_input::AddressInput; // ← ADD THIS IMPORT
 use solana_sdk::pubkey::Pubkey; // ← ADD THIS IMPORT
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
@@ -110,6 +111,9 @@ pub fn TransactionSuccessModal(
     // Explorer links - Solscan and Orb
     let solscan_url = format!("https://solscan.io/tx/{}", signature);
     let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
+    let is_android = cfg!(target_os = "android");
+    let solscan_url_click = solscan_url.clone();
+    let orb_url_click = orb_url.clone();
     
     rsx! {
         div {
@@ -162,19 +166,37 @@ pub fn TransactionSuccessModal(
                         
                         div {
                             class: "explorer-buttons",
-                            a {
-                                class: "explorer-button",
-                                href: "{solscan_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Solscan"
+                            if is_android {
+                                button {
+                                    class: "explorer-button",
+                                    onclick: move |_| crate::ffi::open_external_url_from_dioxus(&solscan_url_click),
+                                    "Solscan"
+                                }
                             }
-                            a {
-                                class: "explorer-button",
-                                href: "{orb_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Orb"
+                            if is_android {
+                                button {
+                                    class: "explorer-button",
+                                    onclick: move |_| crate::ffi::open_external_url_from_dioxus(&orb_url_click),
+                                    "Orb"
+                                }
+                            }
+                            if !is_android {
+                                a {
+                                    class: "explorer-button",
+                                    href: "{solscan_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "Solscan"
+                                }
+                            }
+                            if !is_android {
+                                a {
+                                    class: "explorer-button",
+                                    href: "{orb_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "Orb"
+                                }
                             }
                         }
                     }
@@ -706,7 +728,7 @@ pub fn SendModalWithHardware(
                                 #[cfg(target_os = "android")]
                                 {
                                     match mwa_wallet_state() {
-                                        WalletState::Pubkey(pubkey) => Some(pubkey),
+                                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
                                         WalletState::None => None,
                                     }
                                 }
@@ -746,31 +768,25 @@ pub fn SendModalWithHardware(
 
                                 let client = TransactionClient::new(rpc_url.as_deref());
 
-                                // Use hardware wallet if available, otherwise use software wallet
-                                if mwa_pubkey.is_some() && privacy_enabled() {
-                                    error_message.set(Some("Privacy send is not supported with Seed Vault".to_string()));
-                                    sending.set(false);
-                                    show_hardware_approval.set(false);
-                                    #[cfg(target_os = "android")]
-                                    show_mwa_approval.set(false);
-                                    return;
-                                } else if privacy_enabled() {
-                                    let signer = if let Some(hw) = hardware_wallet_clone.clone() {
-                                        SignerType::Hardware(HardwareSigner::from_wallet(hw))
-                                    } else {
-                                        let Some(wallet_info) = wallet_info else {
-                                            error_message.set(Some("No wallet available".to_string()));
+                                // Use hardware/seed vault/software signer
+                                if privacy_enabled() {
+                                    let signer = match select_signer(
+                                        wallet_info.clone(),
+                                        hardware_wallet_clone.clone(),
+                                        #[cfg(target_os = "android")]
+                                        mwa_pubkey.clone(),
+                                        #[cfg(not(target_os = "android"))]
+                                        None,
+                                    ) {
+                                        Ok(signer) => signer,
+                                        Err(err) => {
+                                            error_message.set(Some(err));
                                             sending.set(false);
+                                            show_hardware_approval.set(false);
+                                            #[cfg(target_os = "android")]
+                                            show_mwa_approval.set(false);
                                             return;
-                                        };
-
-                                        let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
-                                            error_message.set(Some("Failed to load wallet".to_string()));
-                                            sending.set(false);
-                                            return;
-                                        };
-
-                                        SignerType::from_wallet(wallet)
+                                        }
                                     };
                                     let should_clear_hw = signer.is_hardware();
                                     let Ok(authority) = signer.get_public_key().await else {
@@ -779,18 +795,24 @@ pub fn SendModalWithHardware(
                                         if should_clear_hw {
                                             show_hardware_approval.set(false);
                                         }
+                                        #[cfg(target_os = "android")]
+                                        show_mwa_approval.set(false);
                                         return;
                                     };
 
+                                    privacy_progress.set(Some("Step 0/2: Authorizing wallet…".to_string()));
                                     let Ok(signature) = privacycash::sign_auth_message(&signer).await else {
                                         error_message.set(Some("Failed to sign auth message".to_string()));
                                         sending.set(false);
                                         if should_clear_hw {
                                             show_hardware_approval.set(false);
                                         }
+                                        #[cfg(target_os = "android")]
+                                        show_mwa_approval.set(false);
                                         return;
                                     };
 
+                                    privacy_progress.set(Some("Checking private balance…".to_string()));
                                     let rpc_url = rpc_url.unwrap_or_else(|| DEFAULT_RPC_URL.to_string());
                                     let lamports = (amount_value * 1_000_000_000.0) as u64;
                                     let mut private_balance_value = private_balance().unwrap_or(0);
@@ -799,7 +821,7 @@ pub fn SendModalWithHardware(
                                     if private_balance_value < lamports {
                                         let topup = lamports - private_balance_value;
                                         let topup_sol = topup as f64 / 1_000_000_000.0;
-                                        privacy_progress.set(Some("Step 1/2: Depositing to private balance…".to_string()));
+                                        privacy_progress.set(Some("Step 1/2: Building deposit…".to_string()));
                                         let mut tx = match privacycash::build_deposit_tx(
                                             &authority,
                                             &signature,
@@ -815,6 +837,8 @@ pub fn SendModalWithHardware(
                                                 if should_clear_hw {
                                                     show_hardware_approval.set(false);
                                                 }
+                                                #[cfg(target_os = "android")]
+                                                show_mwa_approval.set(false);
                                                 return;
                                             }
                                         };
@@ -828,28 +852,37 @@ pub fn SendModalWithHardware(
                                                 if should_clear_hw {
                                                     show_hardware_approval.set(false);
                                                 }
+                                                #[cfg(target_os = "android")]
+                                                show_mwa_approval.set(false);
                                                 return;
                                             }
                                         };
 
+                                        privacy_progress.set(Some("Step 1/2: Awaiting deposit signature…".to_string()));
                                         if let Err(err) = privacycash::sign_transaction(&signer, &mut tx, recent_blockhash).await {
                                             error_message.set(Some(format!("Failed to sign deposit tx: {err}")));
                                             sending.set(false);
                                             if should_clear_hw {
                                                 show_hardware_approval.set(false);
                                             }
+                                            #[cfg(target_os = "android")]
+                                            show_mwa_approval.set(false);
                                             return;
                                         }
 
+                                        privacy_progress.set(Some("Step 1/2: Submitting deposit…".to_string()));
                                         if let Err(err) = privacycash::submit_deposit(&authority, &tx).await {
                                             error_message.set(Some(format!("Deposit failed: {err}")));
                                             sending.set(false);
                                             if should_clear_hw {
                                                 show_hardware_approval.set(false);
                                             }
+                                            #[cfg(target_os = "android")]
+                                            show_mwa_approval.set(false);
                                             return;
                                         }
 
+                                        privacy_progress.set(Some("Step 1/2: Confirming deposit…".to_string()));
                                         sleep(Duration::from_secs(4)).await;
                                         if let Ok(balance) = privacycash::get_private_balance(
                                             &authority,
@@ -864,7 +897,7 @@ pub fn SendModalWithHardware(
                                         privacy_progress.set(Some(format!("Step 1/2 complete: Deposited {:.4} SOL", topup_sol)));
                                     }
 
-                                    privacy_progress.set(Some("Step 2/2: Sending privately…".to_string()));
+                                    privacy_progress.set(Some("Step 2/2: Building private transfer…".to_string()));
                                     let req = match privacycash::build_withdraw_request(
                                         &authority,
                                         &signature,
@@ -876,36 +909,45 @@ pub fn SendModalWithHardware(
                                     {
                                         Ok(req) => req,
                                         Err(err) => {
-                                            error_message.set(Some(format!("Failed to build withdraw request: {err}")));
-                                            sending.set(false);
-                                            if should_clear_hw {
-                                                show_hardware_approval.set(false);
-                                            }
-                                            return;
+                                        error_message.set(Some(format!("Failed to build withdraw request: {err}")));
+                                        sending.set(false);
+                                        if should_clear_hw {
+                                            show_hardware_approval.set(false);
                                         }
-                                    };
+                                        #[cfg(target_os = "android")]
+                                        show_mwa_approval.set(false);
+                                        return;
+                                    }
+                                };
 
+                                    privacy_progress.set(Some("Step 2/2: Submitting private transfer…".to_string()));
                                     match privacycash::submit_withdraw(&req).await {
                                         Ok(signature) => {
                                             privacy_progress.set(None);
                                             transaction_signature.set(signature);
                                             sending.set(false);
-                                            if should_clear_hw {
-                                                show_hardware_approval.set(false);
-                                            }
-                                            show_success_modal.set(true);
-                                            on_privacy_refresh.call(());
+                                        if should_clear_hw {
+                                            show_hardware_approval.set(false);
                                         }
-                                        Err(err) => {
-                                            privacy_progress.set(None);
-                                            error_message.set(Some(format!("Withdraw failed: {err}")));
-                                            sending.set(false);
-                                            if should_clear_hw {
-                                                show_hardware_approval.set(false);
-                                            }
-                                        }
+                                        #[cfg(target_os = "android")]
+                                        show_mwa_approval.set(false);
+                                        show_success_modal.set(true);
+                                        on_privacy_refresh.call(());
                                     }
-                                } else if let Some(hw) = hardware_wallet_clone {
+                                    Err(err) => {
+                                        privacy_progress.set(None);
+                                        error_message.set(Some(format!("Withdraw failed: {err}")));
+                                        sending.set(false);
+                                        if should_clear_hw {
+                                            show_hardware_approval.set(false);
+                                        }
+                                        #[cfg(target_os = "android")]
+                                        show_mwa_approval.set(false);
+                                    }
+                                }
+                                #[cfg(target_os = "android")]
+                                show_mwa_approval.set(false);
+                            } else if let Some(hw) = hardware_wallet_clone {
                                     let hw_signer = HardwareSigner::from_wallet(hw.clone());
                                     match client.send_sol_with_signer(&hw_signer, &recipient_address, amount_value).await {
                                         Ok(signature) => {
@@ -926,7 +968,24 @@ pub fn SendModalWithHardware(
                                         }
                                     }
                                 } else if let Some(mwa_pubkey) = mwa_pubkey {
-                                    match client.send_sol_with_mwa_simple_direct(mwa_pubkey, &recipient_address, amount_value).await {
+                                    let mwa_pubkey = match Pubkey::from_str(&mwa_pubkey) {
+                                        Ok(pubkey) => pubkey,
+                                        Err(_) => {
+                                            error_message.set(Some("Invalid Seed Vault public key".to_string()));
+                                            sending.set(false);
+                                            #[cfg(target_os = "android")]
+                                            show_mwa_approval.set(false);
+                                            return;
+                                        }
+                                    };
+                                    match client
+                                        .send_sol_with_mwa_simple_direct(
+                                            mwa_pubkey,
+                                            &recipient_address,
+                                            amount_value,
+                                        )
+                                        .await
+                                    {
                                         Ok(signature) => {
                                             transaction_signature.set(signature);
                                             sending.set(false);

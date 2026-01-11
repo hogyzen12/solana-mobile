@@ -15,7 +15,9 @@ use std::str::FromStr;
 use serde_json::{json, Value};
 use reqwest::Client as HttpClient;
 
-use crate::signing::TransactionSigner;
+use crate::signing::{SignerType, TransactionSigner};
+#[cfg(target_os = "android")]
+use crate::signing::mwa::MwaSigner;
 use crate::bonk_staking::types::StakeResult;
 use crate::storage::get_current_jito_settings;
 
@@ -153,7 +155,7 @@ impl BonkStakingClient {
     /// Stake BONK tokens using the app's signing infrastructure
     pub async fn stake_with_signer(
         &self,
-        signer: &dyn TransactionSigner,
+        signer: &SignerType,
         amount: u64,
         duration_days: u64,
         nonce: Option<u32>,
@@ -231,19 +233,42 @@ impl BonkStakingClient {
         };
 
         // Sign transaction
-        let message_bytes = transaction.message.serialize();
-        let signature_bytes = signer.sign_message(&message_bytes).await?;
-
-        if signature_bytes.len() != 64 {
-            return Err(format!("Invalid signature length: {}", signature_bytes.len()).into());
-        }
-
-        let mut sig_array = [0u8; 64];
-        sig_array.copy_from_slice(&signature_bytes);
-        transaction.signatures[0] = SolanaSignature::from(sig_array);
+        let serialized = {
+            #[cfg(target_os = "android")]
+            {
+                match signer {
+                    SignerType::Mwa(_) => {
+                        let unsigned = bincode::serialize(&transaction)?;
+                        MwaSigner::sign_transaction_bytes(&unsigned).await?
+                    }
+                    _ => {
+                        let message_bytes = transaction.message.serialize();
+                        let signature_bytes = signer.sign_message(&message_bytes).await?;
+                        if signature_bytes.len() != 64 {
+                            return Err(format!("Invalid signature length: {}", signature_bytes.len()).into());
+                        }
+                        let mut sig_array = [0u8; 64];
+                        sig_array.copy_from_slice(&signature_bytes);
+                        transaction.signatures[0] = SolanaSignature::from(sig_array);
+                        bincode::serialize(&transaction)?
+                    }
+                }
+            }
+            #[cfg(not(target_os = "android"))]
+            {
+                let message_bytes = transaction.message.serialize();
+                let signature_bytes = signer.sign_message(&message_bytes).await?;
+                if signature_bytes.len() != 64 {
+                    return Err(format!("Invalid signature length: {}", signature_bytes.len()).into());
+                }
+                let mut sig_array = [0u8; 64];
+                sig_array.copy_from_slice(&signature_bytes);
+                transaction.signatures[0] = SolanaSignature::from(sig_array);
+                bincode::serialize(&transaction)?
+            }
+        };
 
         // Send transaction
-        let serialized = bincode::serialize(&transaction)?;
         let encoded = bs58::encode(serialized).into_string();
         let signature = self.send_transaction(&encoded).await?;
 
@@ -348,10 +373,13 @@ impl BonkStakingClient {
         let json: Value = response.json().await?;
 
         if let Some(error) = json.get("error") {
+            println!("[BONK] sendTransaction error response: {:?}", json);
             Err(format!("Transaction error: {:?}", error).into())
         } else if let Some(result) = json["result"].as_str() {
+            println!("[BONK] sendTransaction result: {}", result);
             Ok(result.to_string())
         } else {
+            println!("[BONK] sendTransaction unexpected response: {:?}", json);
             Err(format!("Unknown error: {:?}", json).into())
         }
     }
@@ -480,7 +508,7 @@ impl BonkStakingClient {
     /// Alias for stake_with_signer to match modal's expected method name
     pub async fn stake_bonk_with_signer(
         &self,
-        signer: &dyn TransactionSigner,
+        signer: &SignerType,
         amount: u64,
         duration_days: u64,
         is_hardware_wallet: bool,

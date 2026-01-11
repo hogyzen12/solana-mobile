@@ -15,6 +15,8 @@ use crate::storage::{
 };
 use crate::wallet::WalletInfo;
 use super::send_modal::TransactionSuccessModal;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 
 const DEFAULT_RPC_URL: &str = "https://johna-k3cr1v-fast-mainnet.helius-rpc.com";
 const WINTERNITZ_PRIVKEY_LEN: usize = 896;
@@ -111,6 +113,8 @@ pub fn QuantumVaultModal(
     let mut wallet_balance_loading = use_signal(|| false);
     let mut show_success_modal = use_signal(|| false);
     let mut success_signature = use_signal(|| "".to_string());
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     let mut my_vaults = use_signal(|| Vec::<StoredVault>::new());
     let mut vault_balances = use_signal(|| std::collections::HashMap::<String, f64>::new());
@@ -218,6 +222,11 @@ pub fn QuantumVaultModal(
     });
 
     let handle_create_vault = move |_| {
+        #[cfg(target_os = "android")]
+        if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+            error_message.set(Some("Quantum Vault requires a local wallet; Seed Vault is not supported yet.".to_string()));
+            return;
+        }
         processing.set(true);
         processing_action.set("create".to_string());
         error_message.set(None);
@@ -298,6 +307,11 @@ pub fn QuantumVaultModal(
     let rpc_for_actions_deposit = rpc_for_actions.clone();
     let wallet_for_actions_deposit = wallet_for_actions.clone();
     let handle_deposit = move |_| {
+            #[cfg(target_os = "android")]
+            if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+                error_message.set(Some("Quantum Vault requires a local wallet; Seed Vault is not supported yet.".to_string()));
+                return;
+            }
             processing.set(true);
             processing_action.set("deposit".to_string());
             error_message.set(None);
@@ -389,10 +403,15 @@ pub fn QuantumVaultModal(
     let rpc_for_actions_split = rpc_for_actions.clone();
     let wallet_for_actions_split = wallet_for_actions.clone();
     let handle_split = move |_| {
-            processing.set(true);
-            processing_action.set("split".to_string());
-            error_message.set(None);
-            status_message.set(Some("Preparing split...".to_string()));
+        #[cfg(target_os = "android")]
+        if matches!(mwa_wallet_state(), WalletState::Pubkey(_)) {
+            error_message.set(Some("Quantum Vault requires a local wallet; Seed Vault is not supported yet.".to_string()));
+            return;
+        }
+        processing.set(true);
+        processing_action.set("split".to_string());
+        error_message.set(None);
+        status_message.set(Some("Preparing split...".to_string()));
         let rpc_url_split = rpc_for_actions_split.clone();
         let wallet_split = wallet_for_actions_split.clone();
         spawn(async move {

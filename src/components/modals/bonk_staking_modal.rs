@@ -2,11 +2,13 @@ use dioxus::prelude::*;
 use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
 use crate::bonk_staking::{BonkStakingClient, StakePosition};
-use crate::signing::TransactionSigner;
+use crate::signing::{select_signer, TransactionSigner};
 use crate::common::Token;
 use std::sync::Arc;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 
 #[component]
 fn HardwareApprovalOverlay(oncancel: EventHandler<()>) -> Element {
@@ -98,6 +100,8 @@ pub fn BonkStakingModal(
     let mut transaction_signature = use_signal(|| "".to_string());
     let mut was_hardware_transaction = use_signal(|| false);
     let mut show_hardware_approval = use_signal(|| false);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
     
     // Fetch BONK balance on mount
     let custom_rpc_for_effect = custom_rpc.clone();
@@ -424,36 +428,50 @@ pub fn BonkStakingModal(
                                             
                                             processing.set(true);
                                             error_message.set(None);
-                                            if has_hardware { show_hardware_approval.set(true); }
+                                            show_hardware_approval.set(false);
                                             
                                             let wallet_clone = wallet_c.clone();
                                             let hw_clone = hw_c.clone();
                                             let rpc_clone = rpc_c.clone();
                                             
                                             spawn(async move {
-                                                let is_hardware = hw_clone.is_some();
-
-                                                let signer: Box<dyn TransactionSigner> = if let Some(hw) = hw_clone {
-                                                    Box::new(crate::signing::hardware::HardwareSigner::from_wallet(hw))
-                                                } else if let Some(w) = wallet_clone {
-                                                    match crate::wallet::Wallet::from_wallet_info(&w) {
-                                                        Ok(wallet_obj) => Box::new(crate::signing::software::SoftwareSigner::new(wallet_obj)),
-                                                        Err(e) => {
-                                                            error_message.set(Some(format!("Failed to load wallet: {}", e)));
-                                                            processing.set(false);
-                                                            return;
+                                                let mwa_pubkey = {
+                                                    #[cfg(target_os = "android")]
+                                                    {
+                                                        match mwa_wallet_state() {
+                                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                            WalletState::None => None,
                                                         }
                                                     }
-                                                } else {
-                                                    error_message.set(Some("No wallet available".to_string()));
-                                                    processing.set(false);
-                                                    return;
+                                                    #[cfg(not(target_os = "android"))]
+                                                    {
+                                                        None
+                                                    }
                                                 };
+                                                let signer = match select_signer(
+                                                    wallet_clone.clone(),
+                                                    hw_clone.clone(),
+                                                    #[cfg(target_os = "android")]
+                                                    mwa_pubkey,
+                                                    #[cfg(not(target_os = "android"))]
+                                                    None,
+                                                ) {
+                                                    Ok(signer) => signer,
+                                                    Err(err) => {
+                                                        error_message.set(Some(err));
+                                                        processing.set(false);
+                                                        return;
+                                                    }
+                                                };
+                                                let is_hardware = signer.is_hardware();
+                                                if is_hardware {
+                                                    show_hardware_approval.set(true);
+                                                }
                                                 
                                                 let client = BonkStakingClient::new(rpc_clone.as_deref());
                                                 let amount_lamports = (amt_f64 * 100_000.0) as u64;
                                                 
-                                                match client.stake_bonk_with_signer(&*signer, amount_lamports, duration, is_hardware).await {
+                                                match client.stake_bonk_with_signer(&signer, amount_lamports, duration, is_hardware).await {
                                                     Ok(result) => {
                                                         show_hardware_approval.set(false);
                                                         transaction_signature.set(result.signature);

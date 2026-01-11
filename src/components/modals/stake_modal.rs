@@ -12,12 +12,13 @@ use crate::unstaking::{
 };
 use std::sync::Arc;
 use std::collections::HashMap;
-use crate::signing::hardware::HardwareSigner;
 use crate::staking::create_stake_account;
 use crate::staking::find_mergeable_stake_accounts;
 use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 
 #[derive(PartialEq, Clone, Debug)]
 enum ModalMode {
@@ -460,6 +461,8 @@ pub fn StakeModal(
     let mut unstake_success_signature = use_signal(|| "".to_string());
     let mut unstake_success_operation = use_signal(|| "".to_string());
     let mut unstake_success_amount = use_signal(|| 0.0);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     // Load validators on component mount
     use_effect(move || {
@@ -488,6 +491,8 @@ pub fn StakeModal(
     let wallet_for_effect = wallet.clone();
     let hardware_wallet_for_effect = hardware_wallet.clone();
     let custom_rpc_for_effect = custom_rpc.clone();
+    #[cfg(target_os = "android")]
+    let mwa_wallet_for_effect = mwa_wallet_state.clone();
 
     // Load stake accounts when switching to My Stakes mode
     use_effect(move || {
@@ -513,32 +518,63 @@ pub fn StakeModal(
             let wallet_clone = wallet_for_effect.clone();
             let hardware_wallet_clone = hardware_wallet_for_effect.clone();
             let custom_rpc_clone = custom_rpc_for_effect.clone();
+            #[cfg(target_os = "android")]
+            let mwa_wallet_state_clone = mwa_wallet_for_effect.clone();
 
             spawn(async move {
                 println!("📡 DEBUG: In async block");
                 
                 // Get wallet address
-                let wallet_address = if let Some(hw) = &hardware_wallet_clone {
-                    match hw.get_public_key().await {
-                        Ok(addr) => {
-                            println!("✅ DEBUG: HW wallet address: {}", addr);
-                            addr
+                let wallet_address = {
+                    #[cfg(target_os = "android")]
+                    if let WalletState::Pubkey(pubkey) = mwa_wallet_state_clone() {
+                        println!("✅ DEBUG: MWA wallet address: {}", pubkey);
+                        pubkey.to_string()
+                    } else if let Some(hw) = &hardware_wallet_clone {
+                        match hw.get_public_key().await {
+                            Ok(addr) => {
+                                println!("✅ DEBUG: HW wallet address: {}", addr);
+                                addr
+                            }
+                            Err(e) => {
+                                println!("❌ DEBUG: HW wallet error: {}", e);
+                                error_message.set(Some(format!("Failed to get hardware wallet address: {}", e)));
+                                loading_stakes.set(false);
+                                return;
+                            }
                         }
-                        Err(e) => {
-                            println!("❌ DEBUG: HW wallet error: {}", e);
-                            error_message.set(Some(format!("Failed to get hardware wallet address: {}", e)));
-                            loading_stakes.set(false);
-                            return;
-                        }
+                    } else if let Some(w) = &wallet_clone {
+                        println!("💼 DEBUG: SW wallet address: {}", w.address);
+                        w.address.clone()
+                    } else {
+                        println!("❌ DEBUG: No wallet");
+                        error_message.set(Some("No wallet available".to_string()));
+                        loading_stakes.set(false);
+                        return;
                     }
-                } else if let Some(w) = &wallet_clone {
-                    println!("💼 DEBUG: SW wallet address: {}", w.address);
-                    w.address.clone()
-                } else {
-                    println!("❌ DEBUG: No wallet");
-                    error_message.set(Some("No wallet available".to_string()));
-                    loading_stakes.set(false);
-                    return;
+                    #[cfg(not(target_os = "android"))]
+                    if let Some(hw) = &hardware_wallet_clone {
+                        match hw.get_public_key().await {
+                            Ok(addr) => {
+                                println!("✅ DEBUG: HW wallet address: {}", addr);
+                                addr
+                            }
+                            Err(e) => {
+                                println!("❌ DEBUG: HW wallet error: {}", e);
+                                error_message.set(Some(format!("Failed to get hardware wallet address: {}", e)));
+                                loading_stakes.set(false);
+                                return;
+                            }
+                        }
+                    } else if let Some(w) = &wallet_clone {
+                        println!("💼 DEBUG: SW wallet address: {}", w.address);
+                        w.address.clone()
+                    } else {
+                        println!("❌ DEBUG: No wallet");
+                        error_message.set(Some("No wallet available".to_string()));
+                        loading_stakes.set(false);
+                        return;
+                    }
                 };
 
                 println!("🔍 DEBUG: Calling scan_stake_accounts...");
@@ -687,7 +723,20 @@ pub fn StakeModal(
                                         show_partial_unstake_modal.set(false);
                                         
                                         // Show hardware approval overlay if using hardware wallet
-                                        if hardware_wallet_for_partial.is_some() {
+                                        let mwa_pubkey = {
+                                            #[cfg(target_os = "android")]
+                                            {
+                                                match mwa_wallet_state() {
+                                                    WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                    WalletState::None => None,
+                                                }
+                                            }
+                                            #[cfg(not(target_os = "android"))]
+                                            {
+                                                None
+                                            }
+                                        };
+                                        if hardware_wallet_for_partial.is_some() && mwa_pubkey.is_none() {
                                             show_hardware_approval.set(true);
                                         }
                                         
@@ -695,6 +744,7 @@ pub fn StakeModal(
                                         let hardware_wallet_clone = hardware_wallet_for_partial.clone();
                                         let custom_rpc_clone = custom_rpc_for_partial.clone();
                                         let account_async = account_clone.clone();
+                                        let mwa_pubkey_clone = mwa_pubkey.clone();
                                         
                                         let mut partial_unstaking_clone = partial_unstaking.clone();
                                         let mut error_message_clone = error_message.clone();
@@ -709,6 +759,7 @@ pub fn StakeModal(
                                                 amount,
                                                 wallet_clone.as_ref(),
                                                 hardware_wallet_clone,
+                                                mwa_pubkey_clone,
                                                 custom_rpc_clone.as_deref(),
                                             ).await {
                                                 Ok(signature) => {
@@ -972,7 +1023,17 @@ pub fn StakeModal(
                                 class: "info-message warning",
                                 "Staked SOL will take 2-3 days to unstake. Make sure you have enough SOL for transaction fees."
                             }
-                            if hardware_wallet.is_some() {
+                            if {
+                                #[cfg(target_os = "android")]
+                                {
+                                    hardware_wallet.is_some()
+                                        && matches!(mwa_wallet_state(), WalletState::None)
+                                }
+                                #[cfg(not(target_os = "android"))]
+                                {
+                                    hardware_wallet.is_some()
+                                }
+                            } {
                                 div {
                                     class: "info-message",
                                     "🔐 Your hardware wallet will prompt you to approve the staking transaction."
@@ -1192,7 +1253,20 @@ pub fn StakeModal(
                                                                 withdrawing_clone.set(true);
                                                                 error_message_clone.set(None);
                                                                 
-                                                                if hardware_wallet_for_withdraw.is_some() {
+                                                                let mwa_pubkey = {
+                                                                    #[cfg(target_os = "android")]
+                                                                    {
+                                                                        match mwa_wallet_state() {
+                                                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                                            WalletState::None => None,
+                                                                        }
+                                                                    }
+                                                                    #[cfg(not(target_os = "android"))]
+                                                                    {
+                                                                        None
+                                                                    }
+                                                                };
+                                                                if hardware_wallet_for_withdraw.is_some() && mwa_pubkey.is_none() {
                                                                     show_hardware_approval_clone.set(true);
                                                                 }
                                                                 
@@ -1200,6 +1274,7 @@ pub fn StakeModal(
                                                                 let hardware_wallet_clone = hardware_wallet_for_withdraw.clone();
                                                                 let custom_rpc_clone = custom_rpc_for_withdraw.clone();
                                                                 let account_async = account_clone.clone();
+                                                                let mwa_pubkey_clone = mwa_pubkey.clone();
                                                                 
                                                                 spawn(async move {
                                                                     println!("WITHDRAW: Executing transaction...");
@@ -1208,6 +1283,7 @@ pub fn StakeModal(
                                                                         &account_async,
                                                                         wallet_clone.as_ref(),
                                                                         hardware_wallet_clone,
+                                                                        mwa_pubkey_clone,
                                                                         custom_rpc_clone.as_deref(),
                                                                     ).await {
                                                                         Ok(signature) => {
@@ -1268,7 +1344,20 @@ pub fn StakeModal(
                                                                 error_message_clone.set(None);
                                                                 
                                                                 // Show hardware approval overlay if using hardware wallet
-                                                                if hardware_wallet_for_instant.is_some() {
+                                                                let mwa_pubkey = {
+                                                                    #[cfg(target_os = "android")]
+                                                                    {
+                                                                        match mwa_wallet_state() {
+                                                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                                            WalletState::None => None,
+                                                                        }
+                                                                    }
+                                                                    #[cfg(not(target_os = "android"))]
+                                                                    {
+                                                                        None
+                                                                    }
+                                                                };
+                                                                if hardware_wallet_for_instant.is_some() && mwa_pubkey.is_none() {
                                                                     show_hardware_approval_clone.set(true);
                                                                 }
                                                                 
@@ -1277,6 +1366,7 @@ pub fn StakeModal(
                                                                 let hardware_wallet_clone = hardware_wallet_for_instant.clone();
                                                                 let custom_rpc_clone = custom_rpc_for_instant.clone();
                                                                 let account_async = account_clone.clone();
+                                                                let mwa_pubkey_clone = mwa_pubkey.clone();
                                                                 
                                                                 spawn(async move {
                                                                     println!("INSTANT UNSTAKE: Executing transaction...");
@@ -1285,6 +1375,7 @@ pub fn StakeModal(
                                                                         &account_async,
                                                                         wallet_clone.as_ref(),
                                                                         hardware_wallet_clone,
+                                                                        mwa_pubkey_clone,
                                                                         custom_rpc_clone.as_deref(),
                                                                     ).await {
                                                                         Ok(signature) => {
@@ -1360,7 +1451,20 @@ pub fn StakeModal(
                                                                 error_message_clone.set(None);
                                                                 
                                                                 // Show hardware approval overlay if using hardware wallet
-                                                                if hardware_wallet_for_normal.is_some() {
+                                                                let mwa_pubkey = {
+                                                                    #[cfg(target_os = "android")]
+                                                                    {
+                                                                        match mwa_wallet_state() {
+                                                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                                            WalletState::None => None,
+                                                                        }
+                                                                    }
+                                                                    #[cfg(not(target_os = "android"))]
+                                                                    {
+                                                                        None
+                                                                    }
+                                                                };
+                                                                if hardware_wallet_for_normal.is_some() && mwa_pubkey.is_none() {
                                                                     show_hardware_approval_clone.set(true);
                                                                 }
                                                                 
@@ -1369,6 +1473,7 @@ pub fn StakeModal(
                                                                 let hardware_wallet_clone = hardware_wallet_for_normal.clone();
                                                                 let custom_rpc_clone = custom_rpc_for_normal.clone();
                                                                 let account_async = account_clone.clone();
+                                                                let mwa_pubkey_clone = mwa_pubkey.clone();
                                                                 
                                                                 spawn(async move {
                                                                     println!("NORMAL UNSTAKE: Executing deactivate transaction...");
@@ -1377,6 +1482,7 @@ pub fn StakeModal(
                                                                         &account_async,
                                                                         wallet_clone.as_ref(),
                                                                         hardware_wallet_clone,
+                                                                        mwa_pubkey_clone,
                                                                         custom_rpc_clone.as_deref(),
                                                                     ).await {
                                                                         Ok(signature) => {
@@ -1453,7 +1559,20 @@ pub fn StakeModal(
                                 staking.set(true);
 
                                 // Show hardware approval overlay if using hardware wallet
-                                if hardware_wallet.is_some() {
+                                let mwa_pubkey = {
+                                    #[cfg(target_os = "android")]
+                                    {
+                                        match mwa_wallet_state() {
+                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                            WalletState::None => None,
+                                        }
+                                    }
+                                    #[cfg(not(target_os = "android"))]
+                                    {
+                                        None
+                                    }
+                                };
+                                if hardware_wallet.is_some() && mwa_pubkey.is_none() {
                                     show_hardware_approval.set(true);
                                     was_hardware_transaction.set(true);
                                 } else {
@@ -1464,11 +1583,13 @@ pub fn StakeModal(
                                 let hardware_wallet_clone = hardware_wallet.clone();
                                 let custom_rpc_clone = custom_rpc.clone();
                                 let validator_vote_account = validator.vote_account.clone();
+                                let mwa_pubkey_clone = mwa_pubkey.clone();
                             
                                 spawn(async move {
                                     match create_stake_account(
                                         wallet_clone.as_ref(),
                                         hardware_wallet_clone,
+                                        mwa_pubkey_clone,
                                         &validator_vote_account,
                                         stake_amount,
                                         custom_rpc_clone.as_deref(),
@@ -1540,7 +1661,20 @@ pub fn StakeModal(
                                         let mut show_hardware_approval_clone = show_hardware_approval.clone();
                                         
                                         // Show hardware approval overlay if using hardware wallet
-                                        if hardware_wallet_for_merge.is_some() {
+                                        let mwa_pubkey = {
+                                            #[cfg(target_os = "android")]
+                                            {
+                                                match mwa_wallet_state() {
+                                                    WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                    WalletState::None => None,
+                                                }
+                                            }
+                                            #[cfg(not(target_os = "android"))]
+                                            {
+                                                None
+                                            }
+                                        };
+                                        if hardware_wallet_for_merge.is_some() && mwa_pubkey.is_none() {
                                             show_hardware_approval.set(true);
                                         }
                                         
@@ -1553,6 +1687,7 @@ pub fn StakeModal(
                                                     first_group,
                                                     wallet_clone.as_ref(),
                                                     hardware_wallet_clone,
+                                                    mwa_pubkey.clone(),
                                                     custom_rpc_clone.as_deref(),
                                                 ).await {
                                                     Ok(signature) => {

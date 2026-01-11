@@ -1,10 +1,9 @@
 // src/components/modals/send_token_modal.rs
 use dioxus::prelude::*;
-use crate::wallet::{Wallet, WalletInfo};
+use crate::wallet::{WalletInfo};
 use crate::hardware::HardwareWallet;
 use crate::transaction::TransactionClient;
-use crate::signing::hardware::HardwareSigner;
-use crate::signing::{SignerType, TransactionSigner};
+use crate::signing::{select_signer, TransactionSigner};
 use crate::privacycash;
 use crate::rpc;
 use crate::components::address_input::AddressInput; // ← ADD THIS IMPORT
@@ -13,6 +12,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
+use crate::WalletState;
 
 // Import HardwareWalletEvent from send_modal instead of defining it again
 use crate::components::modals::send_modal::HardwareWalletEvent;
@@ -30,6 +30,9 @@ pub fn TokenTransactionSuccessModal(
     // Explorer links - Solscan and Orb
     let solscan_url = format!("https://solscan.io/tx/{}", signature);
     let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
+    let is_android = cfg!(target_os = "android");
+    let solscan_url_click = solscan_url.clone();
+    let orb_url_click = orb_url.clone();
     
     rsx! {
         div {
@@ -82,19 +85,37 @@ pub fn TokenTransactionSuccessModal(
                         
                         div {
                             class: "explorer-buttons",
-                            a {
-                                class: "explorer-button",
-                                href: "{solscan_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Solscan"
+                            if is_android {
+                                button {
+                                    class: "explorer-button",
+                                    onclick: move |_| crate::ffi::open_external_url_from_dioxus(&solscan_url_click),
+                                    "Solscan"
+                                }
                             }
-                            a {
-                                class: "explorer-button",
-                                href: "{orb_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Orb"
+                            if is_android {
+                                button {
+                                    class: "explorer-button",
+                                    onclick: move |_| crate::ffi::open_external_url_from_dioxus(&orb_url_click),
+                                    "Orb"
+                                }
+                            }
+                            if !is_android {
+                                a {
+                                    class: "explorer-button",
+                                    href: "{solscan_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "Solscan"
+                                }
+                            }
+                            if !is_android {
+                                a {
+                                    class: "explorer-button",
+                                    href: "{orb_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "Orb"
+                                }
                             }
                         }
                     }
@@ -207,6 +228,8 @@ pub fn SendTokenModal(
     
     // Add state for hardware wallet approval overlay - always declared
     let mut show_hardware_approval = use_signal(|| false);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     // Use decimals or default to 6 for most SPL tokens
     let decimals = token_decimals.unwrap_or(6);
@@ -261,19 +284,30 @@ pub fn SendTokenModal(
             let mut private_balance = private_balance.clone();
             let mut private_balance_loading = private_balance_loading.clone();
             let mut private_balance_error = private_balance_error.clone();
+            #[cfg(target_os = "android")]
+            let mwa_pubkey = match mwa_wallet_state() {
+                WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                WalletState::None => None,
+            };
             spawn(async move {
-                let signer = if let Some(hw) = hw_for_refresh {
-                    SignerType::Hardware(HardwareSigner::from_wallet(hw))
-                } else {
-                    let Some(wallet_info) = wallet_info else {
+                #[cfg(target_os = "android")]
+                if mwa_pubkey.is_some() {
+                    private_balance_loading.set(false);
+                    return;
+                }
+                let signer = match select_signer(
+                    wallet_info,
+                    hw_for_refresh,
+                    #[cfg(target_os = "android")]
+                    None,
+                    #[cfg(not(target_os = "android"))]
+                    None,
+                ) {
+                    Ok(signer) => signer,
+                    Err(_) => {
                         private_balance_loading.set(false);
                         return;
-                    };
-                    let Ok(wallet) = Wallet::from_wallet_info(&wallet_info) else {
-                        private_balance_loading.set(false);
-                        return;
-                    };
-                    SignerType::from_wallet(wallet)
+                    }
                 };
                 let Ok(authority) = signer.get_public_key().await else {
                     private_balance_loading.set(false);
@@ -551,7 +585,16 @@ pub fn SendTokenModal(
                     }
                 }
 
-                if hardware_wallet.is_some() {
+                if hardware_wallet.is_some() && {
+                    #[cfg(target_os = "android")]
+                    {
+                        matches!(mwa_wallet_state(), WalletState::None)
+                    }
+                    #[cfg(not(target_os = "android"))]
+                    {
+                        true
+                    }
+                } {
                     div {
                         class: "info-message",
                         "Your hardware wallet will prompt you to approve the {token_symbol} transaction"
@@ -573,9 +616,24 @@ pub fn SendTokenModal(
 
                             error_message.set(None);
                             sending.set(true);
+                            let mwa_pubkey = {
+                                #[cfg(target_os = "android")]
+                                {
+                                    match mwa_wallet_state() {
+                                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                        WalletState::None => None,
+                                    }
+                                }
+                                #[cfg(not(target_os = "android"))]
+                                {
+                                    None
+                                }
+                            };
 
                             // Show hardware approval overlay if using hardware wallet
-                            if hardware_wallet.is_some() {
+                            if mwa_pubkey.is_some() {
+                                was_hardware_transaction.set(false);
+                            } else if hardware_wallet.is_some() {
                                 show_hardware_approval.set(true);
                                 was_hardware_transaction.set(true);
                             } else {
@@ -590,6 +648,7 @@ pub fn SendTokenModal(
                             let rpc_url = custom_rpc.clone();
                             let token_mint_clone = token_mint.clone();
                             let token_symbol_clone = token_symbol.clone();
+                            let mwa_pubkey = mwa_pubkey.clone();
                             
                             // Clone the onhardware event handler for use in async block
                             let onhardware_handler = onhardware.clone();
@@ -610,24 +669,21 @@ pub fn SendTokenModal(
 
                                 let client = TransactionClient::new(rpc_url.as_deref());
 
-                                // Use hardware wallet if available, otherwise use software wallet
                                 if privacy_enabled() && privacy_supported {
-                                    let signer = if let Some(hw) = hardware_wallet_clone.clone() {
-                                        SignerType::Hardware(HardwareSigner::from_wallet(hw))
-                                    } else {
-                                        let Some(ref wallet_info) = wallet_info else {
-                                            error_message.set(Some("No wallet available".to_string()));
+                                    let signer = match select_signer(
+                                        wallet_info.clone(),
+                                        hardware_wallet_clone.clone(),
+                                        #[cfg(target_os = "android")]
+                                        mwa_pubkey.clone(),
+                                        #[cfg(not(target_os = "android"))]
+                                        None,
+                                    ) {
+                                        Ok(signer) => signer,
+                                        Err(err) => {
+                                            error_message.set(Some(err));
                                             sending.set(false);
                                             return;
-                                        };
-
-                                        let Ok(wallet) = Wallet::from_wallet_info(wallet_info) else {
-                                            error_message.set(Some("Failed to load wallet".to_string()));
-                                            sending.set(false);
-                                            return;
-                                        };
-
-                                        SignerType::from_wallet(wallet)
+                                        }
                                     };
                                     let should_clear_hw = signer.is_hardware();
                                     let Ok(authority) = signer.get_public_key().await else {
@@ -639,6 +695,7 @@ pub fn SendTokenModal(
                                         return;
                                     };
 
+                                    privacy_progress.set(Some("Step 0/2: Authorizing wallet…".to_string()));
                                     let Ok(signature) = privacycash::sign_auth_message(&signer).await else {
                                         error_message.set(Some("Failed to sign auth message".to_string()));
                                         sending.set(false);
@@ -687,7 +744,7 @@ pub fn SendTokenModal(
                                             sending.set(false);
                                             return;
                                         }
-                                        privacy_progress.set(Some("Step 1/2: Depositing to private balance…".to_string()));
+                                        privacy_progress.set(Some("Step 1/2: Building deposit…".to_string()));
                                         let mut tx = match privacycash::build_deposit_spl_tx(
                                             &authority,
                                             &signature,
@@ -721,6 +778,7 @@ pub fn SendTokenModal(
                                             }
                                         };
 
+                                        privacy_progress.set(Some("Step 1/2: Awaiting deposit signature…".to_string()));
                                         if let Err(err) = privacycash::sign_transaction(&signer, &mut tx, recent_blockhash).await {
                                             error_message.set(Some(format!("Failed to sign deposit tx: {err}")));
                                             sending.set(false);
@@ -730,6 +788,7 @@ pub fn SendTokenModal(
                                             return;
                                         }
 
+                                        privacy_progress.set(Some("Step 1/2: Submitting deposit…".to_string()));
                                         if let Err(err) = privacycash::submit_deposit(&authority, &tx).await {
                                             error_message.set(Some(format!("Deposit failed: {err}")));
                                             sending.set(false);
@@ -739,6 +798,7 @@ pub fn SendTokenModal(
                                             return;
                                         }
 
+                                        privacy_progress.set(Some("Step 1/2: Confirming deposit…".to_string()));
                                         sleep(Duration::from_secs(4)).await;
                                         if let Ok(balance) = privacycash::get_private_balance_spl(
                                             &authority,
@@ -757,7 +817,7 @@ pub fn SendTokenModal(
                                         )));
                                     }
 
-                                    privacy_progress.set(Some("Step 2/2: Sending privately…".to_string()));
+                                    privacy_progress.set(Some("Step 2/2: Building private transfer…".to_string()));
                                     let req = match privacycash::build_withdraw_spl_request(
                                         &authority,
                                         &signature,
@@ -779,6 +839,7 @@ pub fn SendTokenModal(
                                         }
                                     };
 
+                                    privacy_progress.set(Some("Step 2/2: Submitting private transfer…".to_string()));
                                     match privacycash::submit_withdraw(&req).await {
                                         Ok(signature) => {
                                             privacy_progress.set(None);
@@ -806,55 +867,44 @@ pub fn SendTokenModal(
                                         return;
                                     }
                                 }
-                                if let Some(hw) = hardware_wallet_clone {
-                                    let hw_signer = HardwareSigner::from_wallet(hw.clone());
-                                    match client.send_spl_token_with_signer(&hw_signer, &recipient_address, amount_value, &token_mint_clone).await {
-                                        Ok(signature) => {
-                                            println!("Token transaction sent with hardware wallet: {}", signature);
-
-                                            // Hide hardware approval overlay
-                                            show_hardware_approval.set(false);
-
-                                            // Set the transaction signature and show success modal
-                                            transaction_signature.set(signature);
-                                            sending.set(false);
-                                            show_success_modal.set(true);
-                                        }
-                                        Err(e) => {
-                                            error_message.set(Some(format!("Transaction failed: {}", e)));
-                                            sending.set(false);
-                                            show_hardware_approval.set(false);
-                                        }
+                                let signer = match select_signer(
+                                    wallet_info,
+                                    hardware_wallet_clone,
+                                    #[cfg(target_os = "android")]
+                                    mwa_pubkey,
+                                    #[cfg(not(target_os = "android"))]
+                                    None,
+                                ) {
+                                    Ok(signer) => signer,
+                                    Err(err) => {
+                                        error_message.set(Some(err));
+                                        sending.set(false);
+                                        show_hardware_approval.set(false);
+                                        return;
                                     }
-                                } else if let Some(wallet_info) = wallet_info {
-                                    // Load wallet from wallet info
-                                    match Wallet::from_wallet_info(&wallet_info) {
-                                        Ok(wallet) => {
-                                            // Send SPL token transaction
-                                            match client.send_spl_token(&wallet, &recipient_address, amount_value, &token_mint_clone).await {
-                                                Ok(signature) => {
-                                                    println!("Token transaction sent: {}", signature);
-                                                    
-                                                    // Set the transaction signature and show success modal
-                                                    transaction_signature.set(signature);
-                                                    sending.set(false);
-                                                    show_success_modal.set(true);
-                                                }
-                                                Err(e) => {
-                                                    error_message.set(Some(format!("Transaction failed: {}", e)));
-                                                    sending.set(false);
-                                                }
-                                            }
-                                        }
-                                        Err(e) => {
-                                            error_message.set(Some(format!("Failed to load wallet: {}", e)));
-                                            sending.set(false);
-                                        }
+                                };
+
+                                match client
+                                    .send_spl_token_with_signer(
+                                        &signer,
+                                        &recipient_address,
+                                        amount_value,
+                                        &token_mint_clone,
+                                    )
+                                    .await
+                                {
+                                    Ok(signature) => {
+                                        println!("Token transaction sent: {}", signature);
+                                        show_hardware_approval.set(false);
+                                        transaction_signature.set(signature);
+                                        sending.set(false);
+                                        show_success_modal.set(true);
                                     }
-                                } else {
-                                    error_message.set(Some("No wallet available".to_string()));
-                                    sending.set(false);
-                                    show_hardware_approval.set(false);
+                                    Err(e) => {
+                                        error_message.set(Some(format!("Transaction failed: {}", e)));
+                                        sending.set(false);
+                                        show_hardware_approval.set(false);
+                                    }
                                 }
                             });
                         },

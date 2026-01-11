@@ -8,9 +8,11 @@ use solana_sdk::{
 };
 use solana_system_interface::instruction as system_instruction;
 use solana_stake_interface::instruction::merge;
-use crate::wallet::{Wallet, WalletInfo};
+use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
-use crate::signing::{TransactionSigner, software::SoftwareSigner, hardware::HardwareSigner};
+use crate::signing::{select_signer, TransactionSigner};
+#[cfg(target_os = "android")]
+use crate::signing::mwa::MwaSigner;
 use crate::storage::get_current_jito_settings;
 use crate::transaction::TransactionClient;
 use crate::rpc::{ get_balance, get_minimum_balance_for_rent_exemption };
@@ -359,6 +361,41 @@ impl StakingClient {
         
         println!("Number of signatures expected for staking transaction: {}", transaction.message.header().num_required_signatures);
         
+        // We need to handle the stake account keypair separately since it's generated locally
+        // Create a transaction and sign with BOTH the wallet signer AND the stake account keypair
+        let legacy_message = match &transaction.message {
+            VersionedMessage::Legacy(msg) => msg.clone(),
+            _ => return Err(StakingError::TransactionFailed("Expected legacy message".to_string())),
+        };
+        
+        let mut legacy_transaction = solana_sdk::transaction::Transaction {
+            signatures: vec![SolanaSignature::default(); legacy_message.header.num_required_signatures as usize],
+            message: legacy_message,
+        };
+        
+        // Sign with the stake account keypair first
+        legacy_transaction.partial_sign(&[&stake_account_keypair], recent_blockhash);
+
+        #[cfg(target_os = "android")]
+        if signer.get_name() == "Seed Vault" {
+            let unsigned_tx_bytes = bincode::serialize(&legacy_transaction)
+                .map_err(|e| StakingError::TransactionFailed(format!("Failed to serialize transaction: {}", e)))?;
+            let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+                .await
+                .map_err(|e| StakingError::WalletError(format!("Failed to sign via MWA: {}", e)))?;
+            let encoded_transaction = bs58::encode(signed_tx_bytes).into_string();
+
+            let signature = self.send_staking_transaction(&encoded_transaction).await
+                .map_err(|e| StakingError::TransactionFailed(format!("Failed to send staking transaction: {}", e)))?;
+
+            return Ok(StakeAccountInfo {
+                stake_account_pubkey,
+                transaction_signature: signature,
+                validator_vote_account: validator_pubkey,
+                staked_amount: stake_amount_lamports,
+            });
+        }
+
         // Serialize the transaction message for signing
         let message_bytes = transaction.message.serialize();
         
@@ -374,21 +411,6 @@ impl StakingClient {
         let mut sig_array = [0u8; 64];
         sig_array.copy_from_slice(&signature_bytes);
         let solana_signature = SolanaSignature::from(sig_array);
-        
-        // We need to handle the stake account keypair separately since it's generated locally
-        // Create a transaction and sign with BOTH the wallet signer AND the stake account keypair
-        let legacy_message = match &transaction.message {
-            VersionedMessage::Legacy(msg) => msg.clone(),
-            _ => return Err(StakingError::TransactionFailed("Expected legacy message".to_string())),
-        };
-        
-        let mut legacy_transaction = solana_sdk::transaction::Transaction {
-            signatures: vec![SolanaSignature::default(); legacy_message.header.num_required_signatures as usize],
-            message: legacy_message,
-        };
-        
-        // Sign with the stake account keypair first
-        legacy_transaction.partial_sign(&[&stake_account_keypair], recent_blockhash);
         
         // Then manually add the wallet signature
         // The wallet signature should be the first signature since the wallet is the fee payer
@@ -418,28 +440,28 @@ impl StakingClient {
 pub async fn create_stake_account(
     wallet_info: Option<&WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
+    mwa_pubkey: Option<String>,
     validator_vote_account: &str,
     stake_amount_sol: f64,
     rpc_url: Option<&str>,
 ) -> Result<StakeAccountInfo, StakingError> {
     let staking_client = StakingClient::new(rpc_url);
     
-    let is_hardware_wallet = hardware_wallet.is_some();
-    
-    // Create the appropriate signer based on what's provided
-    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
-        // Create HardwareSigner from the HardwareWallet
-        Box::new(HardwareSigner::from_wallet(hw.clone()))
-    } else if let Some(w) = wallet_info {
-        let wallet = Wallet::from_wallet_info(w)
-            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
-        // Create SoftwareSigner from the Wallet
-        Box::new(SoftwareSigner::new(wallet))
-    } else {
-        return Err(StakingError::WalletError("No wallet or hardware wallet provided".to_string()));
-    };
+    let signer = select_signer(
+        wallet_info.cloned(),
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    )
+    .map_err(StakingError::WalletError)?;
 
-    staking_client.create_stake_account_with_jito(signer.as_ref(), validator_vote_account, stake_amount_sol, is_hardware_wallet).await
+    let is_hardware_wallet = signer.is_hardware();
+
+    staking_client
+        .create_stake_account_with_jito(&signer, validator_vote_account, stake_amount_sol, is_hardware_wallet)
+        .await
 }
 
 /// Convert RPC stake account data to DetailedStakeAccount format
@@ -655,20 +677,20 @@ pub async fn merge_stake_accounts(
     merge_group: &MergeGroup,
     wallet_info: Option<&WalletInfo>,
     hardware_wallet: Option<Arc<HardwareWallet>>,
+    mwa_pubkey: Option<String>,
     rpc_url: Option<&str>,
 ) -> Result<String, StakingError> {
     println!("🔄 MERGE OPERATION: Merging {} accounts", merge_group.accounts.len());
     
-    // Create signer (reuse existing pattern)
-    let signer: Box<dyn TransactionSigner> = if let Some(ref hw) = hardware_wallet {
-        Box::new(HardwareSigner::from_wallet(hw.clone()))
-    } else if let Some(w) = wallet_info {
-        let wallet = Wallet::from_wallet_info(w)
-            .map_err(|e| StakingError::WalletError(format!("Failed to create wallet: {}", e)))?;
-        Box::new(SoftwareSigner::new(wallet))
-    } else {
-        return Err(StakingError::WalletError("No wallet provided".to_string()));
-    };
+    let signer = select_signer(
+        wallet_info.cloned(),
+        hardware_wallet,
+        #[cfg(target_os = "android")]
+        mwa_pubkey,
+        #[cfg(not(target_os = "android"))]
+        None,
+    )
+    .map_err(StakingError::WalletError)?;
 
     // Get authority pubkey
     let authority_pubkey_str = signer.get_public_key().await
@@ -696,7 +718,7 @@ pub async fn merge_stake_accounts(
 
     // Apply Jito tips if enabled AND not using hardware wallet
     let jito_settings = get_current_jito_settings();
-    let is_hardware_wallet = hardware_wallet.is_some();
+    let is_hardware_wallet = signer.is_hardware();
     if jito_settings.jito_tx && !is_hardware_wallet {
         println!("Applying Jito modifications");
         staking_client.apply_jito_modifications(&authority_pubkey, &mut instructions)
@@ -717,22 +739,38 @@ pub async fn merge_stake_accounts(
         message: VersionedMessage::Legacy(message),
     };
     
+    #[cfg(target_os = "android")]
+    if signer.get_name() == "Seed Vault" {
+        let unsigned_tx_bytes = bincode::serialize(&transaction)
+            .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
+        let signed_tx_bytes = MwaSigner::sign_transaction_bytes(&unsigned_tx_bytes)
+            .await
+            .map_err(|e| StakingError::WalletError(format!("Failed to sign via MWA: {}", e)))?;
+        let encoded = bs58::encode(signed_tx_bytes).into_string();
+
+        let signature = staking_client.send_staking_transaction(&encoded).await
+            .map_err(|e| StakingError::TransactionFailed(format!("Send failed: {}", e)))?;
+
+        println!("✅ Merge completed: {}", signature);
+        return Ok(signature);
+    }
+
     // Sign transaction
     let message_bytes = transaction.message.serialize();
     let signature_bytes = signer.sign_message(&message_bytes).await
         .map_err(|e| StakingError::WalletError(format!("Failed to sign: {}", e)))?;
-    
+
     if signature_bytes.len() != 64 {
         return Err(StakingError::WalletError("Invalid signature length".to_string()));
     }
-    
+
     let mut sig_array = [0u8; 64];
     sig_array.copy_from_slice(&signature_bytes);
     let solana_signature = SolanaSignature::from(sig_array);
-    
+
     let mut signed_transaction = transaction;
     signed_transaction.signatures[0] = solana_signature;
-    
+
     // Send transaction
     let serialized = bincode::serialize(&signed_transaction)
         .map_err(|e| StakingError::TransactionFailed(format!("Serialization failed: {}", e)))?;
@@ -744,4 +782,3 @@ pub async fn merge_stake_accounts(
     println!("✅ Merge completed: {}", signature);
     Ok(signature)
 }
-

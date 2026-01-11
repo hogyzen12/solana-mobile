@@ -2,15 +2,16 @@
 
 use dioxus::prelude::*;
 use crate::components::common::Token;
-use crate::wallet::{Wallet, WalletInfo};
+use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
 use crate::components::modals::send_modal::HardwareWalletEvent;
 use crate::transaction::TransactionClient;
-use crate::signing::{SignerType, hardware::HardwareSigner};
+use crate::signing::select_signer;
 use crate::components::address_input::AddressInput; // ← ADD THIS IMPORT
 use solana_sdk::pubkey::Pubkey; // ← ADD THIS IMPORT
 use std::sync::Arc;
 use std::collections::HashSet;
+use crate::WalletState;
 
 #[derive(Debug, Clone)]
 pub struct SelectedTokenForBulkSend {
@@ -89,6 +90,9 @@ pub fn BulkSendSuccessModal(
     // Explorer links - Solscan and Orb
     let solscan_url = format!("https://solscan.io/tx/{}", signature);
     let orb_url = format!("https://orb.helius.dev/tx/{}?cluster=mainnet-beta&tab=summary", signature);
+    let is_android = cfg!(target_os = "android");
+    let solscan_url_click = solscan_url.clone();
+    let orb_url_click = orb_url.clone();
     
     rsx! {
         div {
@@ -139,19 +143,37 @@ pub fn BulkSendSuccessModal(
                         
                         div {
                             class: "explorer-buttons",
-                            a {
-                                class: "explorer-button",
-                                href: "{solscan_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Solscan"
+                            if is_android {
+                                button {
+                                    class: "explorer-button",
+                                    onclick: move |_| crate::ffi::open_external_url_from_dioxus(&solscan_url_click),
+                                    "Solscan"
+                                }
                             }
-                            a {
-                                class: "explorer-button",
-                                href: "{orb_url}",
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                "Orb"
+                            if is_android {
+                                button {
+                                    class: "explorer-button",
+                                    onclick: move |_| crate::ffi::open_external_url_from_dioxus(&orb_url_click),
+                                    "Orb"
+                                }
+                            }
+                            if !is_android {
+                                a {
+                                    class: "explorer-button",
+                                    href: "{solscan_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "Solscan"
+                                }
+                            }
+                            if !is_android {
+                                a {
+                                    class: "explorer-button",
+                                    href: "{orb_url}",
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    "Orb"
+                                }
                             }
                         }
                     }
@@ -197,6 +219,8 @@ pub fn BulkSendModal(
     
     // Hardware approval overlay state
     let mut show_hardware_approval = use_signal(|| false);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
     
     // Get the global TransactionClient from context (pre-initialized with TPU)
     let transaction_client = use_context::<Arc<TransactionClient>>();
@@ -546,9 +570,24 @@ pub fn BulkSendModal(
                             if !sending() {
                                 sending.set(true);
                                 error_message.set(None);
+                                let mwa_pubkey = {
+                                    #[cfg(target_os = "android")]
+                                    {
+                                        match mwa_wallet_state() {
+                                            WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                            WalletState::None => None,
+                                        }
+                                    }
+                                    #[cfg(not(target_os = "android"))]
+                                    {
+                                        None
+                                    }
+                                };
                                 
                                 // Show hardware approval overlay if using hardware wallet
-                                if hardware_wallet.is_some() {
+                                if mwa_pubkey.is_some() {
+                                    was_hardware_transaction.set(false);
+                                } else if hardware_wallet.is_some() {
                                     show_hardware_approval.set(true);
                                     was_hardware_transaction.set(true);
                                 } else {
@@ -560,6 +599,7 @@ pub fn BulkSendModal(
                                 let wallet_info = wallet.clone();
                                 let recipient_address = recipient_pubkey.to_string(); // ← USE RESOLVED PUBKEY
                                 let rpc_url = custom_rpc.clone();
+                                let mwa_pubkey = mwa_pubkey.clone();
                                 let selected_for_send: Vec<SelectedTokenForBulkSend> = selected_tokens()
                                     .iter()
                                     .filter_map(|token| {
@@ -582,31 +622,29 @@ pub fn BulkSendModal(
                                     
                                     // Use the global pre-initialized TransactionClient (already cloned above)
                                 
-                                    // Determine signer type based on available wallet
-                                    let result = if let Some(ref hw) = hardware_wallet_clone {
-                                        // Use hardware wallet signer
-                                        let hw_signer = HardwareSigner::from_wallet(hw.clone());
-                                        client.send_bulk_tokens_with_signer(&hw_signer, &recipient_address, selected_for_send).await
-                                    } else if let Some(wallet_info) = wallet_info {
-                                        // Use software wallet signer
-                                        match Wallet::from_wallet_info(&wallet_info) {
-                                            Ok(wallet) => {
-                                                let signer = SignerType::from_wallet(wallet);
-                                                client.send_bulk_tokens_with_signer(&signer, &recipient_address, selected_for_send).await
-                                            }
-                                            Err(e) => {
-                                                error_message.set(Some(format!("Failed to load wallet: {}", e)));
-                                                sending.set(false);
-                                                show_hardware_approval.set(false);
-                                                return;
-                                            }
+                                    let signer = match select_signer(
+                                        wallet_info,
+                                        hardware_wallet_clone,
+                                        #[cfg(target_os = "android")]
+                                        mwa_pubkey,
+                                        #[cfg(not(target_os = "android"))]
+                                        None,
+                                    ) {
+                                        Ok(signer) => signer,
+                                        Err(err) => {
+                                            error_message.set(Some(err));
+                                            sending.set(false);
+                                            show_hardware_approval.set(false);
+                                            return;
                                         }
-                                    } else {
-                                        error_message.set(Some("No wallet available".to_string()));
-                                        sending.set(false);
-                                        show_hardware_approval.set(false);
-                                        return;
                                     };
+                                    let result = client
+                                        .send_bulk_tokens_with_signer(
+                                            &signer,
+                                            &recipient_address,
+                                            selected_for_send,
+                                        )
+                                        .await;
                                 
                                     // Handle the transaction result
                                     match result {

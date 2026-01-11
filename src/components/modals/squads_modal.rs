@@ -2,10 +2,12 @@ use dioxus::prelude::*;
 use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
 use crate::squads::{SquadsClient, MultisigInfo, PendingTransaction};
-use crate::signing::{SignerType, TransactionSigner};
+use crate::signing::{select_signer, TransactionSigner};
 use std::sync::Arc;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 
 /// Hardware wallet approval overlay for Squads transactions
 #[component]
@@ -201,6 +203,8 @@ pub fn SquadsModal(
     let mut success_signature = use_signal(|| String::new());
     let mut success_threshold_met = use_signal(|| false);
     let mut success_approval_count = use_signal(|| 0u16);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
 
     // Get wallet address
     let display_address = if let Some(hw) = &hardware_wallet {
@@ -703,31 +707,42 @@ pub fn SquadsModal(
                                                                                     let rpc_c = rpc_clone.clone();
                                                                                     
                                                                                     spawn(async move {
-                                                                                        // Create signer
-                                                                                        let signer: Box<dyn TransactionSigner> = if let Some(hw) = hw_c {
-                                                                                            show_hardware_approval.set(true);
-                                                                                            Box::new(crate::signing::hardware::HardwareSigner::from_wallet(hw))
-                                                                                        } else if let Some(w) = wallet_c {
-                                                                                            match crate::wallet::Wallet::from_wallet_info(&w) {
-                                                                                                Ok(wallet_obj) => {
-                                                                                                    Box::new(crate::signing::software::SoftwareSigner::new(wallet_obj))
-                                                                                                }
-                                                                                                Err(e) => {
-                                                                                                    error_message.set(Some(format!("Failed to load wallet: {}", e)));
-                                                                                                    approving.set(false);
-                                                                                                    return;
+                                                                                        let mwa_pubkey = {
+                                                                                            #[cfg(target_os = "android")]
+                                                                                            {
+                                                                                                match mwa_wallet_state() {
+                                                                                                    WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                                                                    WalletState::None => None,
                                                                                                 }
                                                                                             }
-                                                                                        } else {
-                                                                                            error_message.set(Some("No wallet available".to_string()));
-                                                                                            approving.set(false);
-                                                                                            return;
+                                                                                            #[cfg(not(target_os = "android"))]
+                                                                                            {
+                                                                                                None
+                                                                                            }
                                                                                         };
+                                                                                        let signer = match select_signer(
+                                                                                            wallet_c.clone(),
+                                                                                            hw_c.clone(),
+                                                                                            #[cfg(target_os = "android")]
+                                                                                            mwa_pubkey,
+                                                                                            #[cfg(not(target_os = "android"))]
+                                                                                            None,
+                                                                                        ) {
+                                                                                            Ok(signer) => signer,
+                                                                                            Err(err) => {
+                                                                                                error_message.set(Some(err));
+                                                                                                approving.set(false);
+                                                                                                return;
+                                                                                            }
+                                                                                        };
+                                                                                        if signer.is_hardware() {
+                                                                                            show_hardware_approval.set(true);
+                                                                                        }
                                                                                         
                                                                                         // Create client and execute
                                                                                         let client = SquadsClient::new(rpc_c.as_deref());
                                                                                         
-                                                                                        match client.execute_transaction_with_signer(&*signer, &multisig_addr, tx_index).await {
+                                                                                        match client.execute_transaction_with_signer(&signer, &multisig_addr, tx_index).await {
                                                                                             Ok(signature) => {
                                                                                                 show_hardware_approval.set(false);
                                                                                                 success_signature.set(signature);
@@ -773,31 +788,42 @@ pub fn SquadsModal(
                                                                                     let rpc_c = rpc_clone.clone();
                                                                                     
                                                                                     spawn(async move {
-                                                                                        // Create signer
-                                                                                        let signer: Box<dyn TransactionSigner> = if let Some(hw) = hw_c {
-                                                                                            show_hardware_approval.set(true);
-                                                                                            Box::new(crate::signing::hardware::HardwareSigner::from_wallet(hw))
-                                                                                        } else if let Some(w) = wallet_c {
-                                                                                            match crate::wallet::Wallet::from_wallet_info(&w) {
-                                                                                                Ok(wallet_obj) => {
-                                                                                                    Box::new(crate::signing::software::SoftwareSigner::new(wallet_obj))
-                                                                                                }
-                                                                                                Err(e) => {
-                                                                                                    error_message.set(Some(format!("Failed to load wallet: {}", e)));
-                                                                                                    approving.set(false);
-                                                                                                    return;
+                                                                                        let mwa_pubkey = {
+                                                                                            #[cfg(target_os = "android")]
+                                                                                            {
+                                                                                                match mwa_wallet_state() {
+                                                                                                    WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                                                                    WalletState::None => None,
                                                                                                 }
                                                                                             }
-                                                                                        } else {
-                                                                                            error_message.set(Some("No wallet available".to_string()));
-                                                                                            approving.set(false);
-                                                                                            return;
+                                                                                            #[cfg(not(target_os = "android"))]
+                                                                                            {
+                                                                                                None
+                                                                                            }
                                                                                         };
+                                                                                        let signer = match select_signer(
+                                                                                            wallet_c.clone(),
+                                                                                            hw_c.clone(),
+                                                                                            #[cfg(target_os = "android")]
+                                                                                            mwa_pubkey,
+                                                                                            #[cfg(not(target_os = "android"))]
+                                                                                            None,
+                                                                                        ) {
+                                                                                            Ok(signer) => signer,
+                                                                                            Err(err) => {
+                                                                                                error_message.set(Some(err));
+                                                                                                approving.set(false);
+                                                                                                return;
+                                                                                            }
+                                                                                        };
+                                                                                        if signer.is_hardware() {
+                                                                                            show_hardware_approval.set(true);
+                                                                                        }
                                                                                         
                                                                                         // Create client and approve
                                                                                         let client = SquadsClient::new(rpc_c.as_deref());
                                                                                         
-                                                                                        match client.approve_transaction_with_signer(&*signer, &multisig_addr, tx_index).await {
+                                                                                        match client.approve_transaction_with_signer(&signer, &multisig_addr, tx_index).await {
                                                                                             Ok(result) => {
                                                                                                 show_hardware_approval.set(false);
                                                                                                 success_signature.set(result.signature);

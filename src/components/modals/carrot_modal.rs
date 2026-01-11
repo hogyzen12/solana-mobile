@@ -2,11 +2,13 @@ use dioxus::prelude::*;
 use crate::wallet::WalletInfo;
 use crate::hardware::HardwareWallet;
 use crate::carrot::{CarrotClient, CarrotBalances};
-use crate::signing::{SignerType, TransactionSigner};
+use crate::signing::{select_signer, TransactionSigner};
 use carrot_sdk::{USDC_MINT, USDT_MINT, PYUSD_MINT};
 use std::sync::Arc;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
+#[cfg(target_os = "android")]
+use crate::WalletState;
 
 /// Hardware wallet approval overlay for Carrot transactions
 #[component]
@@ -194,6 +196,8 @@ pub fn CarrotModal(
     let mut error_message = use_signal(|| None as Option<String>);
     let mut processing = use_signal(|| false);
     let mut show_hardware_approval = use_signal(|| false);
+    #[cfg(target_os = "android")]
+    let mwa_wallet_state = use_context::<Signal<WalletState>>();
     let mut show_success_modal = use_signal(|| false);
     let mut success_signature = use_signal(|| String::new());
     let mut success_operation = use_signal(|| String::new());
@@ -577,38 +581,48 @@ pub fn CarrotModal(
                                         let asset_mint = get_asset_mint();
                                         
                                         spawn(async move {
-                                            let is_hardware = hw_clone.is_some();
-
-                                            // Create signer
-                                            let signer: Box<dyn TransactionSigner> = if let Some(hw) = hw_clone {
-                                                show_hardware_approval.set(true);
-                                                Box::new(crate::signing::hardware::HardwareSigner::from_wallet(hw))
-                                            } else if let Some(w) = wallet_clone {
-                                                match crate::wallet::Wallet::from_wallet_info(&w) {
-                                                    Ok(wallet_obj) => {
-                                                        Box::new(crate::signing::software::SoftwareSigner::new(wallet_obj))
-                                                    }
-                                                    Err(e) => {
-                                                        error_message.set(Some(format!("Failed to load wallet: {}", e)));
-                                                        processing.set(false);
-                                                        return;
+                                            let mwa_pubkey = {
+                                                #[cfg(target_os = "android")]
+                                                {
+                                                    match mwa_wallet_state() {
+                                                        WalletState::Pubkey(pubkey) => Some(pubkey.to_string()),
+                                                        WalletState::None => None,
                                                     }
                                                 }
-                                            } else {
-                                                error_message.set(Some("No wallet available".to_string()));
-                                                processing.set(false);
-                                                return;
+                                                #[cfg(not(target_os = "android"))]
+                                                {
+                                                    None
+                                                }
                                             };
+                                            let signer = match select_signer(
+                                                wallet_clone.clone(),
+                                                hw_clone.clone(),
+                                                #[cfg(target_os = "android")]
+                                                mwa_pubkey,
+                                                #[cfg(not(target_os = "android"))]
+                                                None,
+                                            ) {
+                                                Ok(signer) => signer,
+                                                Err(err) => {
+                                                    error_message.set(Some(err));
+                                                    processing.set(false);
+                                                    return;
+                                                }
+                                            };
+                                            let is_hardware = signer.is_hardware();
+                                            if is_hardware {
+                                                show_hardware_approval.set(true);
+                                            }
                                             
                                             // Create client
                                             let client = CarrotClient::new(rpc_clone.as_deref());
                                             
                                             // Execute operation
                                             let result = if operation == "deposit" {
-                                                client.deposit_with_signer(&*signer, &asset_mint, amount_lamports, is_hardware).await
+                                                client.deposit_with_signer(&signer, &asset_mint, amount_lamports, is_hardware).await
                                                     .map(|r| (r.signature, r.crt_received, "CRT".to_string()))
                                             } else {
-                                                client.withdraw_with_signer(&*signer, &asset_mint, amount_lamports, is_hardware).await
+                                                client.withdraw_with_signer(&signer, &asset_mint, amount_lamports, is_hardware).await
                                                     .map(|r| (r.signature, r.asset_received, asset.to_string()))
                                             };
                                             

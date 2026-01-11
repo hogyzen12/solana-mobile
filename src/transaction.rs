@@ -25,6 +25,7 @@ use spl_token::instruction as token_instruction;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use spl_associated_token_account::instruction::create_associated_token_account;
 use std::collections::HashMap;
+use std::time::Duration;
 use yellowstone_jet_tpu_client::yellowstone_grpc::sender::YellowstoneTpuSender;
 use tokio::sync::{Mutex, OnceCell};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -624,40 +625,45 @@ impl TransactionClient {
         
         // RPC send (unchanged - this is the source of truth)
         let jito_settings = get_current_jito_settings();
-        
-        // Prepare the request, potentially with Jito-specific parameters
-        let request = if jito_settings.jito_tx {
-            // If JitoTx is enabled, use base64 encoding as recommended by Jito
-            // and skip preflight as required by Jito
-            json!({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "sendTransaction",
-                "params": [
-                    signed_tx,
-                    {
-                        "encoding": "base58", // We're still using base58 as that's what our code produces
-                        "skipPreflight": true, // Jito requires skipPreflight=true
-                        "preflightCommitment": "finalized"
-                    }
-                ]
-            })
-        } else {
-            // Regular transaction submission
-            json!({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "sendTransaction",
-                "params": [
-                    signed_tx,
-                    {
-                        "encoding": "base58",
-                        "skipPreflight": false,
-                        "preflightCommitment": "finalized"
-                    }
-                ]
-            })
-        };
+        let skip_preflight = jito_settings.jito_tx;
+        let preflight_commitment = "finalized";
+        let max_retries = if jito_settings.jito_tx { Some(5) } else { Some(3) };
+
+        self.send_transaction_with_options(
+            signed_tx,
+            skip_preflight,
+            preflight_commitment,
+            max_retries,
+        )
+        .await
+    }
+
+    /// Send a transaction with explicit options.
+    pub async fn send_transaction_with_options(
+        &self,
+        signed_tx: &str,
+        skip_preflight: bool,
+        preflight_commitment: &str,
+        max_retries: Option<u64>,
+    ) -> Result<String, Box<dyn Error>> {
+        let mut config = json!({
+            "encoding": "base58",
+            "skipPreflight": skip_preflight,
+            "preflightCommitment": preflight_commitment
+        });
+
+        if let Some(retries) = max_retries {
+            if let Some(config_obj) = config.as_object_mut() {
+                config_obj.insert("maxRetries".to_string(), json!(retries));
+            }
+        }
+
+        let request = json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "sendTransaction",
+            "params": [signed_tx, config]
+        });
 
         let response = self.client
             .post(&self.rpc_url)
@@ -666,9 +672,8 @@ impl TransactionClient {
             .await?;
 
         let json: Value = response.json().await?;
-        
         println!("Send transaction response: {:?}", json);
-        
+
         if let Some(error) = json.get("error") {
             Err(format!("Transaction error: {:?}", error).into())
         } else if let Some(result) = json["result"].as_str() {
@@ -1091,7 +1096,10 @@ impl TransactionClient {
             "jsonrpc": "2.0",
             "id": 1,
             "method": "getSignatureStatuses",
-            "params": [[signature]]
+            "params": [
+                [signature],
+                { "searchTransactionHistory": true }
+            ]
         });
 
         let response = self.client
@@ -1102,10 +1110,41 @@ impl TransactionClient {
 
         let json: Value = response.json().await?;
         
-        if let Some(result) = json["result"]["value"][0]["confirmationStatus"].as_str() {
+        let value = &json["result"]["value"][0];
+        if value.is_null() {
+            return Ok(false);
+        }
+
+        if let Some(err) = value.get("err") {
+            if !err.is_null() {
+                return Err(format!("Transaction failed: {:?}", err).into());
+            }
+        }
+
+        if let Some(result) = value["confirmationStatus"].as_str() {
             Ok(result == "finalized" || result == "confirmed")
         } else {
             Ok(false)
+        }
+    }
+
+    /// Confirm a transaction with polling and timeout.
+    pub async fn confirm_transaction_with_timeout(
+        &self,
+        signature: &str,
+        timeout: Duration,
+    ) -> Result<bool, Box<dyn Error>> {
+        let deadline = std::time::Instant::now() + timeout;
+        loop {
+            if self.confirm_transaction(signature).await? {
+                return Ok(true);
+            }
+
+            if std::time::Instant::now() >= deadline {
+                return Ok(false);
+            }
+
+            tokio::time::sleep(Duration::from_secs(2)).await;
         }
     }
 
