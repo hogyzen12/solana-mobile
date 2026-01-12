@@ -213,25 +213,46 @@ impl HardwareWallet {
             connection.find_and_connect().await
                 .map_err(|e| format!("Failed to connect to hardware wallet: {}", e))?;
             
-            // Get the public key
-            let response = connection.send_command(Command::GetPubkey).await
-                .map_err(|e| format!("Failed to get public key: {}", e))?;
-            match response {
-                Response::Pubkey(pubkey) => {
-                    // Validate that the pubkey is a valid Solana address
-                    if let Err(e) = bs58::decode(&pubkey).into_vec() {
-                        return Err(format!("Invalid public key format: {}", e).into());
+            // Get the public key (retry to avoid partial reads)
+            let mut pubkey_opt = None;
+            for attempt in 1..=3 {
+                let response = connection.send_command(Command::GetPubkey).await
+                    .map_err(|e| format!("Failed to get public key: {}", e))?;
+                match response {
+                    Response::Pubkey(pubkey) => {
+                        match bs58::decode(&pubkey).into_vec() {
+                            Ok(bytes) if bytes.len() == 32 => {
+                                pubkey_opt = Some(pubkey);
+                                break;
+                            }
+                            Ok(bytes) => {
+                                log::warn!(
+                                    "Short pubkey on attempt {} ({} bytes). Retrying...",
+                                    attempt,
+                                    bytes.len()
+                                );
+                            }
+                            Err(e) => {
+                                log::warn!("Invalid pubkey on attempt {}: {}", attempt, e);
+                            }
+                        }
                     }
-                    *self.public_key.lock().await = Some(pubkey);
-                    *self.device_type.lock().await = Some(HardwareDeviceType::ESP32);
+                    Response::Error(e) => {
+                        return Err(format!("Hardware wallet error: {}", e).into());
+                    }
+                    _ => {
+                        log::warn!("Unexpected pubkey response on attempt {}", attempt);
+                    }
                 }
-                Response::Error(e) => {
-                    return Err(format!("Hardware wallet error: {}", e).into());
-                }
-                _ => {
-                    return Err("Unexpected response from hardware wallet".into());
-                }
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             }
+
+            let pubkey = pubkey_opt.ok_or_else(|| {
+                "Failed to read a valid 32-byte public key from hardware wallet".to_string()
+            })?;
+
+            *self.public_key.lock().await = Some(pubkey);
+            *self.device_type.lock().await = Some(HardwareDeviceType::ESP32);
             
             *esp32_guard = Some(connection);
         }

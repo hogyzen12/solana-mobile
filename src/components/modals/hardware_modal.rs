@@ -1,6 +1,8 @@
 // src/components/modals/hardware_modal.rs
 use dioxus::prelude::*;
 use crate::hardware::{HardwareWallet, HardwareDeviceInfo, HardwareDeviceType};
+#[cfg(target_os = "android")]
+use crate::hardware::protocol::{Command, Response};
 use std::sync::Arc;
 
 // Define the assets for device icons - local assets
@@ -26,6 +28,13 @@ pub fn HardwareWalletModal(
     let mut device_type = use_signal(|| None as Option<HardwareDeviceType>);
     let mut available_devices = use_signal(|| Vec::<HardwareDeviceInfo>::new());
     let mut scanning = use_signal(|| false);
+    let mut debug_logs = use_signal(|| Vec::<String>::new());
+    let mut debug_devices = use_signal(|| Vec::<HardwareDeviceInfo>::new());
+    let mut debug_scanning = use_signal(|| false);
+    let mut debug_connecting = use_signal(|| false);
+    let mut debug_wallet = use_signal(|| None as Option<Arc<HardwareWallet>>);
+    let mut debug_pubkey = use_signal(|| None as Option<String>);
+    let mut show_usb_debug = use_signal(|| false);
     
     // Store if we have an existing wallet
     let has_existing_wallet = existing_wallet.is_some();
@@ -126,6 +135,12 @@ pub fn HardwareWalletModal(
                     class: "modal-header",
                     h2 { class: "modal-title", "Hardware Wallet" }
                     button {
+                        class: "button-standard",
+                        style: "margin-right: 12px; padding: 6px 10px; border-radius: 8px; font-size: 12px; background: #2b2b2b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1);",
+                        onclick: move |_| show_usb_debug.set(!show_usb_debug()),
+                        if show_usb_debug() { "Hide USB Debug" } else { "USB Debug" }
+                    }
+                    button {
                         class: "modal-close-button",
                         onclick: move |_| onclose.call(()),
                         "×"
@@ -143,7 +158,172 @@ pub fn HardwareWalletModal(
                             div { class: "error-text", "{error}" }
                         }
                     }
-                    
+
+                    if cfg!(target_os = "android") && show_usb_debug() {
+                        div {
+                            style: "margin-bottom: 20px; padding: 16px; border-radius: 16px; background: #1f1f1f; border: 1px solid rgba(255,255,255,0.08);",
+                            h4 { style: "margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #f8fafc;", "USB Debug" }
+                            p { style: "margin: 0 0 12px 0; font-size: 12px; color: #9ca3af;", "Tap Scan → Connect → GET_PUBKEY. The first connect will prompt for USB permission." }
+
+                            div {
+                                style: "display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;",
+                                button {
+                                    style: "padding: 8px 12px; border-radius: 10px; background: #2b2b2b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.08);",
+                                    disabled: debug_scanning(),
+                                    onclick: move |_| {
+                                        debug_scanning.set(true);
+                                        let mut debug_logs = debug_logs.clone();
+                                        let mut debug_devices = debug_devices.clone();
+                                        spawn(async move {
+                                            debug_logs.with_mut(|logs| {
+                                                logs.push("USB scan started".to_string());
+                                                if logs.len() > 8 { logs.remove(0); }
+                                            });
+                                            let devices = HardwareWallet::scan_available_devices().await;
+                                            let count = devices.len();
+                                            debug_devices.set(devices);
+                                            debug_logs.with_mut(|logs| {
+                                                logs.push(format!("USB scan complete: {} device(s)", count));
+                                                if logs.len() > 8 { logs.remove(0); }
+                                            });
+                                            debug_scanning.set(false);
+                                        });
+                                    },
+                                    if debug_scanning() { "Scanning..." } else { "Scan USB" }
+                                }
+                                button {
+                                    style: "padding: 8px 12px; border-radius: 10px; background: #2b2b2b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.08);",
+                                    disabled: debug_connecting(),
+                                    onclick: move |_| {
+                                        debug_connecting.set(true);
+                                        debug_pubkey.set(None);
+                                        let mut debug_logs = debug_logs.clone();
+                                        let mut debug_wallet = debug_wallet.clone();
+                                        let mut debug_pubkey = debug_pubkey.clone();
+                                        spawn(async move {
+                                            debug_logs.with_mut(|logs| {
+                                                logs.push("Connecting to ESP32 (debug)...".to_string());
+                                                if logs.len() > 8 { logs.remove(0); }
+                                            });
+                                            let wallet = Arc::new(HardwareWallet::new());
+                                            match wallet.connect_esp32().await {
+                                                Ok(_) => {
+                                                    match wallet.get_public_key().await {
+                                                        Ok(pubkey) => {
+                                                            debug_pubkey.set(Some(pubkey.clone()));
+                                                            debug_wallet.set(Some(wallet));
+                                                            debug_logs.with_mut(|logs| {
+                                                                logs.push(format!("Connected: {}", pubkey));
+                                                                if logs.len() > 8 { logs.remove(0); }
+                                                            });
+                                                        }
+                                                        Err(e) => {
+                                                            debug_logs.with_mut(|logs| {
+                                                                logs.push(format!("Connected, but pubkey failed: {}", e));
+                                                                if logs.len() > 8 { logs.remove(0); }
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    debug_logs.with_mut(|logs| {
+                                                        logs.push(format!("Connect failed: {}", e));
+                                                        if logs.len() > 8 { logs.remove(0); }
+                                                    });
+                                                }
+                                            }
+                                            debug_connecting.set(false);
+                                        });
+                                    },
+                                    if debug_connecting() { "Connecting..." } else { "Connect ESP32" }
+                                }
+                                button {
+                                    style: "padding: 8px 12px; border-radius: 10px; background: #2b2b2b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.08);",
+                                    onclick: move |_| {
+                                        let wallet = debug_wallet();
+                                        let mut debug_logs = debug_logs.clone();
+                                        let mut debug_pubkey = debug_pubkey.clone();
+                                        spawn(async move {
+                                            match wallet {
+                                                Some(w) => {
+                                                    match w.send_command(Command::GetPubkey).await {
+                                                        Ok(Response::Pubkey(pubkey)) => {
+                                                            debug_pubkey.set(Some(pubkey.clone()));
+                                                            debug_logs.with_mut(|logs| {
+                                                                logs.push(format!("GET_PUBKEY: {}", pubkey));
+                                                                if logs.len() > 8 { logs.remove(0); }
+                                                            });
+                                                        }
+                                                        Ok(Response::Error(err)) => {
+                                                            debug_logs.with_mut(|logs| {
+                                                                logs.push(format!("GET_PUBKEY error: {}", err));
+                                                                if logs.len() > 8 { logs.remove(0); }
+                                                            });
+                                                        }
+                                                        Ok(other) => {
+                                                            debug_logs.with_mut(|logs| {
+                                                                logs.push(format!("Unexpected response: {:?}", other));
+                                                                if logs.len() > 8 { logs.remove(0); }
+                                                            });
+                                                        }
+                                                        Err(e) => {
+                                                            debug_logs.with_mut(|logs| {
+                                                                logs.push(format!("GET_PUBKEY failed: {}", e));
+                                                                if logs.len() > 8 { logs.remove(0); }
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                                None => {
+                                                    debug_logs.with_mut(|logs| {
+                                                        logs.push("No debug connection active".to_string());
+                                                        if logs.len() > 8 { logs.remove(0); }
+                                                    });
+                                                }
+                                            }
+                                        });
+                                    },
+                                    "GET_PUBKEY"
+                                }
+                                button {
+                                    style: "padding: 8px 12px; border-radius: 10px; background: #2b2b2b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.08);",
+                                    onclick: move |_| {
+                                        let wallet = debug_wallet();
+                                        let mut debug_logs = debug_logs.clone();
+                                        spawn(async move {
+                                            if let Some(w) = wallet {
+                                                let _ = w.disconnect().await;
+                                            }
+                                            debug_logs.with_mut(|logs| {
+                                                logs.push("Disconnected debug session".to_string());
+                                                if logs.len() > 8 { logs.remove(0); }
+                                            });
+                                        });
+                                        debug_wallet.set(None);
+                                        debug_pubkey.set(None);
+                                    },
+                                    "Disconnect"
+                                }
+                            }
+
+                            div { style: "font-size: 12px; color: #9ca3af; margin-bottom: 8px;", "Devices found: {debug_devices().len()}" }
+                            if let Some(pubkey) = debug_pubkey() {
+                                div { style: "font-size: 12px; color: #f8fafc; margin-bottom: 8px;", "Last pubkey: {pubkey}" }
+                            }
+
+                            div {
+                                style: "max-height: 140px; overflow: auto; font-size: 12px; background: #141414; border-radius: 10px; padding: 8px; color: #d1d5db;",
+                                if debug_logs().is_empty() {
+                                    div { "No debug logs yet." }
+                                } else {
+                                    for line in debug_logs() {
+                                        div { "{line}" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if !connected() {
                         div {
                             class: "connection-section",
@@ -339,6 +519,7 @@ pub fn HardwareWalletModal(
                             }
                         }
                     }
+
                 }
             }
         }

@@ -749,22 +749,38 @@ pub fn WalletView() -> Element {
     use_effect(move || {
         spawn(async move {
             loop {
-                let is_present = HardwareWallet::is_device_present();
+                let is_present = {
+                    #[cfg(target_os = "android")]
+                    {
+                        if hardware_connected() {
+                            true
+                        } else {
+                            !HardwareWallet::scan_available_devices().await.is_empty()
+                        }
+                    }
+                    #[cfg(not(target_os = "android"))]
+                    {
+                        HardwareWallet::is_device_present()
+                    }
+                };
                 let was_present = hardware_device_present();
-                
+
                 if is_present != was_present {
                     log::info!("🔍 Hardware device presence changed: {} -> {}", was_present, is_present);
                 }
-                
+
                 hardware_device_present.set(is_present);
-                
-                if !is_present && hardware_connected() {
-                    log::info!("🔌 Hardware device removed, disconnecting...");
-                    hardware_connected.set(false);
-                    hardware_wallet.set(None);
-                    hardware_pubkey.set(None);
+
+                #[cfg(not(target_os = "android"))]
+                {
+                    if !is_present && hardware_connected() {
+                        log::info!("🔌 Hardware device removed, disconnecting...");
+                        hardware_connected.set(false);
+                        hardware_wallet.set(None);
+                        hardware_pubkey.set(None);
+                    }
                 }
-                
+
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             }
         });
@@ -1029,10 +1045,10 @@ pub fn WalletView() -> Element {
         let address = {
             #[cfg(target_os = "android")]
             {
-                if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
-                    pubkey.to_string()
-                } else if hw_connected && hw_pubkey.is_some() {
+                if hw_connected && hw_pubkey.is_some() {
                     hw_pubkey.clone().unwrap()
+                } else if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+                    pubkey.to_string()
                 } else if let Some(wallet) = wallets_list.get(index) {
                     wallet.address.clone()
                 } else {
@@ -1570,10 +1586,10 @@ pub fn WalletView() -> Element {
     let full_address = {
         #[cfg(target_os = "android")]
         {
-            if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
-                pubkey.to_string()
-            } else if hardware_connected() && hardware_pubkey().is_some() {
+            if hardware_connected() && hardware_pubkey().is_some() {
                 hardware_pubkey().unwrap()
+            } else if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+                pubkey.to_string()
             } else if let Some(wallet) = current_wallet.as_ref() {
                 wallet.address.clone()
             } else {
@@ -1596,10 +1612,10 @@ pub fn WalletView() -> Element {
     let wallet_address = {
         #[cfg(target_os = "android")]
         {
-            let addr = if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
-                pubkey.to_string()
-            } else if hardware_connected() && hardware_pubkey().is_some() {
+            let addr = if hardware_connected() && hardware_pubkey().is_some() {
                 hardware_pubkey().unwrap()
+            } else if let WalletState::Pubkey(pubkey) = mwa_wallet_state() {
+                pubkey.to_string()
             } else if let Some(wallet) = current_wallet.as_ref() {
                 wallet.address.clone()
             } else {
@@ -2283,6 +2299,7 @@ pub fn WalletView() -> Element {
                         spawn(async move {
                             if let Ok(pubkey) = hw_wallet.get_public_key().await {
                                 hardware_pubkey.set(Some(pubkey));
+                                refresh_trigger.set(refresh_trigger().wrapping_add(1));
                             }
                             
                             // Get and set the device type - clone it for the println
@@ -2334,6 +2351,7 @@ pub fn WalletView() -> Element {
                         // Update the hardware wallet connection state in the parent component
                         hardware_connected.set(event.connected);
                         hardware_pubkey.set(event.pubkey);
+                        refresh_trigger.set(refresh_trigger().wrapping_add(1));
                         
                         // If disconnected, also set the hardware_wallet to None
                         if !event.connected {
@@ -2872,7 +2890,28 @@ pub fn WalletView() -> Element {
                     if show_integrations() {
                         div {
                             class: "integrations-row",
-                            
+
+                            button {
+                                class: "action-button-segmented",
+                                onclick: move |_| {
+                                    println!("Hardware Wallet button clicked!");
+                                    show_hardware_modal.set(true);
+                                },
+
+                                div {
+                                    class: "action-icon-segmented",
+                                    img {
+                                        src: "{ICON_32}",
+                                        alt: "Hardware"
+                                    }
+                                }
+
+                                div {
+                                    class: "action-label-segmented",
+                                    "Hardware"
+                                }
+                            }
+
                             button {
                                 class: "action-button-segmented",
                                 onclick: move |_| {
