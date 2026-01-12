@@ -3,6 +3,8 @@
 pub mod serial;
 #[cfg(target_os = "android")]
 pub mod android_usb;
+#[cfg(target_os = "android")]
+pub mod android_ledger;
 
 pub mod protocol;
 // Only include ledger module on desktop platforms (not mobile)
@@ -108,7 +110,7 @@ impl HardwareWallet {
         }
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
-            false // Ledger not supported on mobile
+            false // Ledger presence requires async scan on mobile
         }
     }
 
@@ -136,6 +138,19 @@ impl HardwareWallet {
                         devices.push(HardwareDeviceInfo {
                             device_type: HardwareDeviceType::ESP32,
                             name: device.device_name,
+                            connected: false,
+                        });
+                    }
+                }
+                Err(_) => {}
+            }
+
+            match android_ledger::AndroidLedgerConnection::scan_for_devices().await {
+                Ok(ledger_devices) => {
+                    for device in ledger_devices {
+                        devices.push(HardwareDeviceInfo {
+                            device_type: HardwareDeviceType::Ledger,
+                            name: format!("Ledger {:04X}:{:04X}", device.vendor_id, device.product_id),
                             connected: false,
                         });
                     }
@@ -282,7 +297,21 @@ impl HardwareWallet {
         }
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
-            Err("Ledger support not available on mobile platforms".into())
+            #[cfg(target_os = "android")]
+            {
+                let pubkey = android_ledger::AndroidLedgerConnection::get_public_key()
+                    .await
+                    .map_err(|e| format!("Failed to get Ledger public key: {}", e))?;
+
+                *self.public_key.lock().await = Some(pubkey);
+                *self.device_type.lock().await = Some(HardwareDeviceType::Ledger);
+                log::info!("✅ Connected to Ledger hardware wallet (Android)");
+                Ok(())
+            }
+            #[cfg(target_os = "ios")]
+            {
+                Err("Ledger support not available on mobile platforms".into())
+            }
         }
     }
     
@@ -367,7 +396,17 @@ impl HardwareWallet {
                 }
                 #[cfg(any(target_os = "android", target_os = "ios"))]
                 {
-                    Err("Ledger signing not available on mobile platforms".into())
+                    #[cfg(target_os = "android")]
+                    {
+                        let signature = android_ledger::AndroidLedgerConnection::sign_message(message)
+                            .await
+                            .map_err(|e| format!("Ledger sign error: {}", e))?;
+                        Ok(signature)
+                    }
+                    #[cfg(target_os = "ios")]
+                    {
+                        Err("Ledger signing not available on mobile platforms".into())
+                    }
                 }
             }
             None => Err("No hardware wallet connected".into()),

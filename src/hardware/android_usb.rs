@@ -498,7 +498,13 @@ impl AndroidUsbSerial {
         activity: &JObject<'b>,
         class_name: &str,
     ) -> Result<JClass<'b>, StorageError> {
-        let class_loader = env.call_method(activity, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])?.l()?;
+        let class_loader = env
+            .call_method(activity, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+            .map_err(|e| {
+                Self::clear_java_exception(env, "getting ClassLoader");
+                StorageError::from(e)
+            })?
+            .l()?;
         let class_name = env.new_string(class_name)?;
         let class_obj = env
             .call_method(
@@ -506,7 +512,11 @@ impl AndroidUsbSerial {
                 "loadClass",
                 "(Ljava/lang/String;)Ljava/lang/Class;",
                 &[(&class_name).into()],
-            )?
+            )
+            .map_err(|e| {
+                Self::clear_java_exception(env, "loading UsbSerialProber class");
+                StorageError::from(e)
+            })?
             .l()?;
         Ok(JClass::from(class_obj))
     }
