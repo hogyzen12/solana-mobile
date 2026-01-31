@@ -1,3 +1,7 @@
+Added complete support for FFI'ing into the JNI through kotlin and accessing the Seedvault along with the USBC port for ledger connectivty. Acheived with a mix of rust and post bundling scripts. Privacy cash assets are the wasm and circuit files that we then ffi into using js from the rust app.
+
+shoutout hardhatCHAD and the ORE team
+
 # Solana Mobile Dioxus Example
 
 This is a sample Dioxus application that demonstrates how to integrate with the Solana Mobile Wallet Adapter (MWA) on Android. The app currently has implementations for `signTransaction`, `signMessage`, and `authorize` (connect).
